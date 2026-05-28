@@ -1,0 +1,22 @@
+# Environment
+.env
+.env.test
+
+# Claude local settings
+.claude/settings.local.json
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage/
+
+# Build
+dist/
+
+# OS
+.DS_Store
