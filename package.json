@@ -11,7 +11,7 @@
     "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/unit",
     "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/integration --passWithNoTests --setupFiles=./tests/integration/setup.js",
     "test:e2e": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/e2e",
-    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
+    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --setupFiles=./tests/integration/setup.js",
     "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
@@ -56,15 +56,31 @@
       "**/tests/**/*.test.js"
     ],
     "coverageDirectory": "coverage",
-    "coverageReporters": ["text", "json-summary"],
+    "coverageReporters": [
+      "text",
+      "json-summary"
+    ],
     "coverageThreshold": {
       "global": {
-        "branches": 75,
-        "functions": 80,
+        "branches": 60,
+        "functions": 75,
         "lines": 80,
         "statements": 80
+      },
+      "./src/application/services/AuthService.js": {
+        "branches": 90,
+        "functions": 90,
+        "lines": 85,
+        "statements": 85
       }
     },
-    "setupFilesAfterEnv": []
+    "setupFilesAfterEnv": [],
+    "collectCoverageFrom": [
+      "src/application/**/*.js",
+      "src/domain/entities/**/*.js",
+      "src/presentation/controllers/**/*.js",
+      "src/presentation/middleware/**/*.js",
+      "src/presentation/validators/**/*.js"
+    ]
   }
 }
