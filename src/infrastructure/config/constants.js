@@ -1,0 +1,11 @@
+export const JWT_EXPIRES_IN = '24h';
+export const JWT_REFRESH_EXPIRES_IN = '7d';
+export const BCRYPT_SALT_ROUNDS = 12;
+export const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+export const RATE_LIMIT_MAX = 100;
+export const LOGIN_LOCKOUT_ATTEMPTS = 10;
+export const LOGIN_LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+export const COMPETITION_TIMEOUT_MS = 5 * 60 * 1000;
+export const TIMER_MAX_SECONDS = 600;
+export const PRESENCE_HEARTBEAT_MS = 30 * 1000;
+export const PRESENCE_EXPIRY_MS = 2 * 60 * 1000;
