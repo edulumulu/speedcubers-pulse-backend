@@ -30,7 +30,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run test:coverage
-      - name: Coverage summary
+      - name: Coverage summary (Actions tab)
         if: always()
         run: |
           if [ -f coverage/coverage-summary.json ]; then
@@ -45,6 +45,13 @@ jobs:
             " >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
+      - name: Coverage comment on PR
+        uses: ArtiomTr/jest-coverage-report-action@v2
+        if: github.event_name == 'pull_request'
+        with:
+          skip-step: all
+          coverage-file: coverage/coverage-summary.json
+          base-coverage-file: coverage/coverage-summary.json
 
   test-integration:
     name: Integration Tests
