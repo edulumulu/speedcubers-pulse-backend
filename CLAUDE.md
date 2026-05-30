@@ -128,15 +128,36 @@ Ver `.env.example`. Variables críticas:
 ## Comandos útiles
 
 ```bash
-npm run dev          # Servidor con nodemon
-npm test             # Todos los tests
-npm run test:unit
-npm run test:integration
-npm run test:coverage
-npm run db:migrate   # Correr migraciones
-npm run db:seed      # Datos de prueba
-npm run lint         # ESLint + Prettier check
+npm run dev                   # Servidor con nodemon (puerto 3000)
+npm run test:unit             # Tests unitarios (sin BD)
+npm run test:integration      # Tests de integración (PostgreSQL real)
+npm run test:coverage         # Suite completa + reporte de cobertura
+npm run lint                  # ESLint + Prettier check
+
+npm run db:migrate            # Ejecutar migraciones pendientes
+npm run db:migrate:undo       # Revertir última migración
+npm run db:migrate:undo:all   # Revertir todas las migraciones
+npm run db:seed               # Cargar fixtures de desarrollo
+npm run db:seed:undo          # Revertir último seed
+npm run db:reset              # Reset completo: revert seeds + migraciones, relanzar ambos
 ```
+
+## Fixtures de desarrollo
+
+Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
+
+| Username | Email | WCA ID |
+|---|---|---|
+| `edulumulu` | eduardo@speedcubers.dev | 2022LUCA04 |
+| `margallego` | margallego@speedcubers.dev | 2013VICE01 |
+| `fastcuber` | cuber3@speedcubers.dev | — |
+| `speedmaster` | cuber4@speedcubers.dev | — |
+
+## Migraciones y seeds
+
+El runner usa **umzug** (no sequelize-cli, que no soporta ESM).
+Scripts en `scripts/migrate.js` y `scripts/seed.js`.
+Seeders en `src/infrastructure/database/seeders/` — solo para desarrollo, nunca en producción.
 
 ## Fases del MVP
 
