@@ -87,14 +87,29 @@ Targets:
 
 ## Base de datos
 
-Tablas principales: `usuarios`, `wca_profiles`, `competencias`, `resultados`, `ranking`
+Tablas principales: `users`, `wca_profiles`, `competitions`, `results`, `rankings`
+
+| Nombre en spec (referencia) | Nombre real en BD |
+|-----------------------------|-------------------|
+| `usuarios` | `users` |
+| `competencias` | `competitions` |
+| `resultados` | `results` |
+| `ranking` | `rankings` |
+| `usuario_id` | `user_id` |
+| `tiempo_raw` | `raw_time` |
+| `es_dnf` | `is_dnf` |
+| `penalizacion` | `penalty` |
+| `victorias` / `derrotas` | `wins` / `losses` |
+| `tiempo_promedio` | `average_time` |
+
+Todas las tablas, columnas, migraciones, modelos Sequelize, Redis keys y eventos Socket.io deben estar en **inglés**.
 
 Redis keys:
 ```
-ranking:top:100        → Array top 100
-user:{id}:stats        → Stats de usuario
-online:users           → Set de usuarios online
-competencia:{id}       → Estado de competencia activa
+ranking:top:100           → Array top 100
+user:{id}:stats           → Stats de usuario
+online:users              → Set de usuarios online
+competition:{id}          → Estado de competencia activa
 ```
 
 Migraciones versionadas: `001-create-users.js`, `002-...`

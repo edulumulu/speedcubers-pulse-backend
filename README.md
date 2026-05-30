@@ -37,8 +37,8 @@ Server runs on `http://localhost:3000`
 
 ## 📖 Documentation
 
-- **Architecture & Design**: See [docs/ARCHITECTURE.md](../speedcubers-pulse-docs/PROJECT_SPEC.md)
-- **Execution Standards**: See [EXECUTION_GUIDE.md](../speedcubers-pulse-docs/EXECUTION_GUIDE.md)
+- **Architecture & Design**: See [SPEEDCUBERS_SPAIN_PROJECT_SPEC.md](../speedcubers-pulse-docs/SPEEDCUBERS_SPAIN_PROJECT_SPEC.md)
+- **Execution Standards**: See [PROFESSIONAL_EXECUTION_GUIDE.md](../speedcubers-pulse-docs/PROFESSIONAL_EXECUTION_GUIDE.md)
 - **API Reference**: See `docs/API.md` (coming soon)
 
 ## ✅ Testing
@@ -60,7 +60,7 @@ Target: >90% coverage
 - CORS configuration
 - Rate limiting
 
-See EXECUTION_GUIDE.md for Security Checklist
+See [PROFESSIONAL_EXECUTION_GUIDE.md](../speedcubers-pulse-docs/PROFESSIONAL_EXECUTION_GUIDE.md) for Security Checklist
 
 ## 📦 Tech Stack
 
@@ -84,7 +84,7 @@ src/
 
 ## 🔄 Git Workflow
 
-See [EXECUTION_GUIDE.md](../speedcubers-pulse-docs/EXECUTION_GUIDE.md) for:
+See [PROFESSIONAL_EXECUTION_GUIDE.md](../speedcubers-pulse-docs/PROFESSIONAL_EXECUTION_GUIDE.md) for:
 - Conventional Commits
 - Branch naming
 - Pull Request process
@@ -101,7 +101,7 @@ Production: Automated via GitHub Actions on `main` branch with tag `v*`
 - Phase 1: Authentication (Week 2-3)
 - Phase 2: User Profiles (Week 3.5)
 - Phase 3: Rankings (Week 4)
-- [See full roadmap in PROJECT_SPEC.md](../speedcubers-pulse-docs/PROJECT_SPEC.md#plan-de-fases)
+- [See full roadmap in SPEEDCUBERS_SPAIN_PROJECT_SPEC.md](../speedcubers-pulse-docs/SPEEDCUBERS_SPAIN_PROJECT_SPEC.md#plan-de-fases)
 
 ## 👨‍💻 Contributing
 
