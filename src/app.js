@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
+import routes from './presentation/routes/index.js';
 
 const app = express();
 
@@ -16,7 +17,6 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '0.1.0' });
 });
 
-// Routes will be mounted here in Phase 1+
-// app.use('/api/v1', routes);
+app.use('/api/v1', routes);
 
 export default app;
