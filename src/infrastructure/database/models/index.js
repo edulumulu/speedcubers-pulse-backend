@@ -1,7 +1,9 @@
 import { Sequelize } from 'sequelize';
 import { initUser } from './User.js';
 import { initWcaProfile } from './WcaProfile.js';
-import config from '../config.js';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const config = require('../config.cjs');
 
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env];

@@ -1,12 +1,8 @@
-import { resolve } from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+const path = require('path');
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-export default {
-  config: resolve(__dirname, 'src/infrastructure/database/config.js'),
-  'models-path': resolve(__dirname, 'src/infrastructure/database/models'),
-  'seeders-path': resolve(__dirname, 'src/infrastructure/database/seeders'),
-  'migrations-path': resolve(__dirname, 'src/infrastructure/database/migrations'),
+module.exports = {
+  config: path.resolve('src/infrastructure/database/config.cjs'),
+  'models-path': path.resolve('src/infrastructure/database/models'),
+  'seeders-path': path.resolve('src/infrastructure/database/seeders'),
+  'migrations-path': path.resolve('src/infrastructure/database/migrations'),
 };
