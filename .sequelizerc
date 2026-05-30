@@ -1,0 +1,12 @@
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+export default {
+  config: resolve(__dirname, 'src/infrastructure/database/config.js'),
+  'models-path': resolve(__dirname, 'src/infrastructure/database/models'),
+  'seeders-path': resolve(__dirname, 'src/infrastructure/database/seeders'),
+  'migrations-path': resolve(__dirname, 'src/infrastructure/database/migrations'),
+};
