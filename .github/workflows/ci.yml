@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [develop, main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   lint:
     name: Lint
@@ -30,7 +34,47 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run test:coverage
-      - name: Coverage summary
+      - name: Post coverage comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (!fs.existsSync('coverage/coverage-summary.json')) return;
+            const s = JSON.parse(fs.readFileSync('coverage/coverage-summary.json')).total;
+            const pct = (v) => `${v.pct}%`.padStart(6);
+            const bar = (v) => '█'.repeat(Math.round(v.pct / 10)) + '░'.repeat(10 - Math.round(v.pct / 10));
+            const body = [
+              '## 📊 Test Coverage',
+              '| | % | |',
+              '|---|---|---|',
+              `| Statements | ${pct(s.statements)} | ${bar(s.statements)} |`,
+              `| Branches   | ${pct(s.branches)}   | ${bar(s.branches)} |`,
+              `| Functions  | ${pct(s.functions)}  | ${bar(s.functions)} |`,
+              `| Lines      | ${pct(s.lines)}      | ${bar(s.lines)} |`,
+            ].join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.startsWith('## 📊 Test Coverage'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+      - name: Coverage summary (Actions tab)
         if: always()
         run: |
           if [ -f coverage/coverage-summary.json ]; then
