@@ -39,7 +39,7 @@ Conventional Commits obligatorio: `<type>(<scope>): <subject>`
 
 Tipos: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`, `ci`, `style`
 
-Scopes: `auth`, `user`, `competencia`, `ranking`, `result`, `wca`, `cache`, `socket`, `db`, `middleware`
+Scopes: `auth`, `user`, `competition`, `ranking`, `result`, `wca`, `cache`, `socket`, `db`, `middleware`
 
 Subject: imperativo, max 50 chars, sin punto final, minúsculas.
 
@@ -47,7 +47,7 @@ Ejemplos válidos:
 ```
 feat(auth): add jwt refresh token endpoint
 fix(ranking): correct points calculation on DNF
-test(competencia): add integration tests for join flow
+test(competition): add integration tests for join flow
 ```
 
 ## Branches
@@ -88,6 +88,8 @@ Targets:
 ## Base de datos
 
 Tablas principales: `users`, `wca_profiles`, `competitions`, `results`, `rankings`
+
+`wca_profiles` almacena únicamente `wca_id` y `country_iso2`. Nombre, foto, rankings y competiciones se consultan en tiempo real desde la WCA API — nunca se persisten (ver ADR-007 en la spec).
 
 | Nombre en spec (referencia) | Nombre real en BD |
 |-----------------------------|-------------------|
