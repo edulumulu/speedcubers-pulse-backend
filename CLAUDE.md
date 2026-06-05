@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fase 0 completada (setup). Próxima: Fase 1 (Autenticación).
+**Estado actual**: Fase 1 completada (autenticación). Próxima: Fase 2 (Perfiles de usuario).
 
 ## Arquitectura
 
@@ -39,7 +39,7 @@ Conventional Commits obligatorio: `<type>(<scope>): <subject>`
 
 Tipos: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`, `ci`, `style`
 
-Scopes: `auth`, `user`, `competencia`, `ranking`, `result`, `wca`, `cache`, `socket`, `db`, `middleware`
+Scopes: `auth`, `user`, `competition`, `ranking`, `result`, `wca`, `cache`, `socket`, `db`, `middleware`
 
 Subject: imperativo, max 50 chars, sin punto final, minúsculas.
 
@@ -47,7 +47,7 @@ Ejemplos válidos:
 ```
 feat(auth): add jwt refresh token endpoint
 fix(ranking): correct points calculation on DNF
-test(competencia): add integration tests for join flow
+test(competition): add integration tests for join flow
 ```
 
 ## Branches
@@ -87,14 +87,31 @@ Targets:
 
 ## Base de datos
 
-Tablas principales: `usuarios`, `wca_profiles`, `competencias`, `resultados`, `ranking`
+Tablas principales: `users`, `wca_profiles`, `competitions`, `results`, `rankings`
+
+`wca_profiles` almacena únicamente `wca_id` y `country_iso2`. Nombre, foto, rankings y competiciones se consultan en tiempo real desde la WCA API — nunca se persisten (ver ADR-007 en la spec).
+
+| Nombre en spec (referencia) | Nombre real en BD |
+|-----------------------------|-------------------|
+| `usuarios` | `users` |
+| `competencias` | `competitions` |
+| `resultados` | `results` |
+| `ranking` | `rankings` |
+| `usuario_id` | `user_id` |
+| `tiempo_raw` | `raw_time` |
+| `es_dnf` | `is_dnf` |
+| `penalizacion` | `penalty` |
+| `victorias` / `derrotas` | `wins` / `losses` |
+| `tiempo_promedio` | `average_time` |
+
+Todas las tablas, columnas, migraciones, modelos Sequelize, Redis keys y eventos Socket.io deben estar en **inglés**.
 
 Redis keys:
 ```
-ranking:top:100        → Array top 100
-user:{id}:stats        → Stats de usuario
-online:users           → Set de usuarios online
-competencia:{id}       → Estado de competencia activa
+ranking:top:100           → Array top 100
+user:{id}:stats           → Stats de usuario
+online:users              → Set de usuarios online
+competition:{id}          → Estado de competencia activa
 ```
 
 Migraciones versionadas: `001-create-users.js`, `002-...`
@@ -111,23 +128,44 @@ Ver `.env.example`. Variables críticas:
 ## Comandos útiles
 
 ```bash
-npm run dev          # Servidor con nodemon
-npm test             # Todos los tests
-npm run test:unit
-npm run test:integration
-npm run test:coverage
-npm run db:migrate   # Correr migraciones
-npm run db:seed      # Datos de prueba
-npm run lint         # ESLint + Prettier check
+npm run dev                   # Servidor con nodemon (puerto 3000)
+npm run test:unit             # Tests unitarios (sin BD)
+npm run test:integration      # Tests de integración (PostgreSQL real)
+npm run test:coverage         # Suite completa + reporte de cobertura
+npm run lint                  # ESLint + Prettier check
+
+npm run db:migrate            # Ejecutar migraciones pendientes
+npm run db:migrate:undo       # Revertir última migración
+npm run db:migrate:undo:all   # Revertir todas las migraciones
+npm run db:seed               # Cargar fixtures de desarrollo
+npm run db:seed:undo          # Revertir último seed
+npm run db:reset              # Reset completo: revert seeds + migraciones, relanzar ambos
 ```
+
+## Fixtures de desarrollo
+
+Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
+
+| Username | Email | WCA ID |
+|---|---|---|
+| `edulumulu` | eduardo@speedcubers.dev | 2022LUCA04 |
+| `margallego` | margallego@speedcubers.dev | 2013VICE01 |
+| `fastcuber` | cuber3@speedcubers.dev | — |
+| `speedmaster` | cuber4@speedcubers.dev | — |
+
+## Migraciones y seeds
+
+El runner usa **umzug** (no sequelize-cli, que no soporta ESM).
+Scripts en `scripts/migrate.js` y `scripts/seed.js`.
+Seeders en `src/infrastructure/database/seeders/` — solo para desarrollo, nunca en producción.
 
 ## Fases del MVP
 
 | Fase | Contenido | Estado |
 |------|-----------|--------|
 | 0 | Setup e infraestructura | ✅ |
-| 1 | Autenticación (JWT + WCA opcional) | ⏳ Siguiente |
-| 2 | Perfiles de usuario | — |
+| 1 | Autenticación (JWT + WCA opcional) | ✅ |
+| 2 | Perfiles de usuario | ⏳ Siguiente |
 | 3 | Rankings + Redis cache | — |
 | 4 | Videoconferencia (Agora.io) | — |
 | 5 | Sistema de timing | — |

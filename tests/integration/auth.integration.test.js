@@ -1,0 +1,130 @@
+import request from 'supertest';
+import app from '../../src/app.js';
+import { sequelize } from '../../src/infrastructure/database/models/index.js';
+
+beforeAll(async () => {
+  await sequelize.sync({ force: true });
+});
+
+afterAll(async () => {
+  await sequelize.close();
+});
+
+beforeEach(async () => {
+  await sequelize.query('TRUNCATE TABLE wca_profiles, users RESTART IDENTITY CASCADE');
+});
+
+const validUser = {
+  email: 'alice@test.com',
+  username: 'alice',
+  password: 'Pass123!',
+};
+
+describe('POST /api/v1/auth/register', () => {
+  it('creates a user and returns 201 with tokens', async () => {
+    const res = await request(app).post('/api/v1/auth/register').send(validUser);
+    expect(res.status).toBe(201);
+    expect(res.body.tokens.accessToken).toBeDefined();
+    expect(res.body.tokens.refreshToken).toBeDefined();
+    expect(res.body.user.email).toBe(validUser.email);
+    expect(res.body.user.passwordHash).toBeUndefined();
+  });
+
+  it('returns 409 when email is already taken', async () => {
+    await request(app).post('/api/v1/auth/register').send(validUser);
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ ...validUser, username: 'bob' });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('EMAIL_TAKEN');
+  });
+
+  it('returns 409 when username is already taken', async () => {
+    await request(app).post('/api/v1/auth/register').send(validUser);
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ ...validUser, email: 'bob@test.com' });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('USERNAME_TAKEN');
+  });
+
+  it('returns 400 for invalid email', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ ...validUser, email: 'not-an-email' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when password lacks uppercase letter', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ ...validUser, password: 'pass123!' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/v1/auth/login', () => {
+  beforeEach(async () => {
+    await request(app).post('/api/v1/auth/register').send(validUser);
+  });
+
+  it('returns 200 with tokens for valid credentials', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: validUser.email, password: validUser.password });
+    expect(res.status).toBe(200);
+    expect(res.body.tokens.accessToken).toBeDefined();
+  });
+
+  it('returns 401 for wrong password', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: validUser.email, password: 'Wrong123!' });
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe('INVALID_CREDENTIALS');
+  });
+
+  it('returns 401 for unknown email', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'nobody@test.com', password: 'Pass123!' });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /api/v1/auth/refresh', () => {
+  it('returns new tokens for a valid refresh token', async () => {
+    const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);
+    const { refreshToken } = registerRes.body.tokens;
+
+    const res = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({ refresh_token: refreshToken });
+    expect(res.status).toBe(200);
+    expect(res.body.tokens.accessToken).toBeDefined();
+  });
+
+  it('returns 401 for an invalid refresh token', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({ refresh_token: 'bad.token' });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /api/v1/auth/logout', () => {
+  it('returns 204 for authenticated user', async () => {
+    const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);
+    const { accessToken } = registerRes.body.tokens;
+
+    const res = await request(app)
+      .post('/api/v1/auth/logout')
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(res.status).toBe(204);
+  });
+
+  it('returns 401 without token', async () => {
+    const res = await request(app).post('/api/v1/auth/logout');
+    expect(res.status).toBe(401);
+  });
+});
