@@ -9,7 +9,7 @@
     "start": "node src/server.js",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/unit",
-    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/integration --passWithNoTests --setupFiles=./tests/integration/setup.js",
+    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/integration --passWithNoTests --setupFiles=./tests/integration/setup.js --runInBand",
     "test:e2e": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/e2e",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --setupFiles=./tests/integration/setup.js",
     "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",

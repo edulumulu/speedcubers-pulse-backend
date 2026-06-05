@@ -88,7 +88,7 @@ export class UserService {
   async deleteMe(userId) {
     const shortId = userId.replace(/-/g, '').slice(0, 12);
     await this.userRepository.update(userId, {
-      email: `del_${shortId}@deleted`,
+      email: `del_${shortId}@deleted.invalid`,
       username: `del_${shortId}`,
     });
     await this.userRepository.delete(userId);
