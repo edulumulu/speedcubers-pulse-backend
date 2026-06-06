@@ -20,10 +20,10 @@ export class WcaService {
     const alreadyLinked = await this.wcaProfileRepository.findByUserId(userId);
 
     if (alreadyLinked) {
-      return this.wcaProfileRepository.update(userId, {
-        wcaId: wcaPerson.wcaId,
-        countryIso2: wcaPerson.countryIso2,
-      });
+      const err = new Error('WCA ID already linked to this account and cannot be changed');
+      err.code = 'WCA_ALREADY_LINKED';
+      err.status = 409;
+      throw err;
     }
 
     return this.wcaProfileRepository.create({

@@ -37,16 +37,16 @@ describe('WcaService.validateAndLink', () => {
     expect(result.wcaId).toBe('2022LUCA04');
   });
 
-  it('updates existing profile when user already has one', async () => {
+  it('throws WCA_ALREADY_LINKED when user already has a WCA profile', async () => {
     mockRepo.findByWcaId.mockResolvedValue(null);
     mockRepo.findByUserId.mockResolvedValue({ userId: 'u1', wcaId: 'OLD' });
     mockFetchWcaPerson.mockResolvedValue({ wcaId: '2022LUCA04', countryIso2: 'ES' });
-    mockRepo.update.mockResolvedValue({ userId: 'u1', wcaId: '2022LUCA04', countryIso2: 'ES' });
 
     const svc = makeService();
-    await svc.validateAndLink('u1', '2022LUCA04');
+    await expect(svc.validateAndLink('u1', '2022LUCA04'))
+      .rejects.toMatchObject({ code: 'WCA_ALREADY_LINKED', status: 409 });
 
-    expect(mockRepo.update).toHaveBeenCalledTimes(1);
+    expect(mockRepo.update).not.toHaveBeenCalled();
     expect(mockRepo.create).not.toHaveBeenCalled();
   });
 
