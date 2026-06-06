@@ -14,3 +14,4 @@ if (existsSync(envPath)) {
     }
   }
 }
+

@@ -1,15 +1,12 @@
 import request from 'supertest';
 import app from '../../src/app.js';
 import { sequelize } from '../../src/infrastructure/database/models/index.js';
-import redis from '../../src/infrastructure/config/redis.js';
-
 beforeAll(async () => {
   await sequelize.sync({ force: true });
 });
 
 afterAll(async () => {
   await sequelize.close();
-  await redis.quit();
 });
 
 beforeEach(async () => {
