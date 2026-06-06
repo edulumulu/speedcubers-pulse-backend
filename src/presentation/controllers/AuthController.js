@@ -97,4 +97,23 @@ export class AuthController {
       res.status(err.status || 500).json({ error: err.message });
     }
   };
+
+  checkAvailability = async (req, res) => {
+    try {
+      const { username, email } = req.query;
+      const result = {};
+      const checks = [];
+      if (username) checks.push(
+        this.authService.isUsernameTaken(username).then(taken => { result.username = { taken }; }),
+      );
+      if (email) checks.push(
+        this.authService.isEmailTaken(email).then(taken => { result.email = { taken }; }),
+      );
+      if (!checks.length) return res.status(400).json({ error: 'Provide username or email' });
+      await Promise.all(checks);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
 }

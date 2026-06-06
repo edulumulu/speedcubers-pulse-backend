@@ -22,6 +22,40 @@ const validUser = {
   password: 'Pass123!',
 };
 
+describe('GET /api/v1/auth/check', () => {
+  beforeEach(async () => {
+    await request(app).post('/api/v1/auth/register').send({
+      email: 'eduardo@speedcubers.dev',
+      username: 'edulumulu',
+      password: 'Abcd1234',
+    });
+  });
+
+  it('returns taken:true for an existing username', async () => {
+    const res = await request(app).get('/api/v1/auth/check?username=edulumulu');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ username: { taken: true } });
+  });
+
+  it('returns taken:false for a non-existing username', async () => {
+    const res = await request(app).get('/api/v1/auth/check?username=notexists');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ username: { taken: false } });
+  });
+
+  it('returns taken:true for an existing email', async () => {
+    const res = await request(app).get('/api/v1/auth/check?email=eduardo@speedcubers.dev');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ email: { taken: true } });
+  });
+
+  it('returns 400 when no params are provided', async () => {
+    const res = await request(app).get('/api/v1/auth/check');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Provide username or email');
+  });
+});
+
 describe('POST /api/v1/auth/register', () => {
   it('creates a user and returns 201 with tokens', async () => {
     const res = await request(app).post('/api/v1/auth/register').send(validUser);

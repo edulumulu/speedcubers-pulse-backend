@@ -161,6 +161,34 @@ describe('AuthService.forgotPassword', () => {
   });
 });
 
+describe('AuthService.isUsernameTaken', () => {
+  it('returns true when username exists', async () => {
+    mockUserRepository.findByUsername.mockResolvedValue({ id: 'uuid-1' });
+    const svc = makeService();
+    await expect(svc.isUsernameTaken('takenuser')).resolves.toBe(true);
+  });
+
+  it('returns false when username does not exist', async () => {
+    mockUserRepository.findByUsername.mockResolvedValue(null);
+    const svc = makeService();
+    await expect(svc.isUsernameTaken('freeuser')).resolves.toBe(false);
+  });
+});
+
+describe('AuthService.isEmailTaken', () => {
+  it('returns true when email exists', async () => {
+    mockUserRepository.findByEmail.mockResolvedValue({ id: 'uuid-1' });
+    const svc = makeService();
+    await expect(svc.isEmailTaken('taken@b.com')).resolves.toBe(true);
+  });
+
+  it('returns false when email does not exist', async () => {
+    mockUserRepository.findByEmail.mockResolvedValue(null);
+    const svc = makeService();
+    await expect(svc.isEmailTaken('free@b.com')).resolves.toBe(false);
+  });
+});
+
 describe('AuthService.resetPassword', () => {
   it('updates password and deletes token when token is valid', async () => {
     redis.get.mockResolvedValue('uuid-1');

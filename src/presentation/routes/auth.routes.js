@@ -22,6 +22,7 @@ const authService = new AuthService(new UserRepository(models));
 const wcaService = new WcaService(new WcaProfileRepository(models));
 const controller = new AuthController(authService, wcaService);
 
+router.get('/check', controller.checkAvailability);
 router.post('/register', validate(registerSchema), controller.register);
 router.post('/login', validate(loginSchema), controller.login);
 router.post('/refresh', validate(refreshSchema), controller.refresh);

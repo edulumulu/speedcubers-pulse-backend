@@ -112,6 +112,16 @@ export class AuthService {
     await redis.del(`pwd_reset:${token}`);
   }
 
+  async isUsernameTaken(username) {
+    const user = await this.userRepository.findByUsername(username);
+    return !!user;
+  }
+
+  async isEmailTaken(email) {
+    const user = await this.userRepository.findByEmail(email);
+    return !!user;
+  }
+
   #generateTokens(userId) {
     const accessToken = jwt.sign(
       { sub: userId },
