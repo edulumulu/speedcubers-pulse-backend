@@ -112,6 +112,9 @@ ranking:top:100           → Array top 100
 user:{id}:stats           → Stats de usuario
 online:users              → Set de usuarios online
 competition:{id}          → Estado de competencia activa
+login_fail:{email}        → Contador de intentos fallidos de login (TTL: 15 min)
+login_lock:{email}        → Bloqueo de cuenta activo (TTL: 15 min)
+pwd_reset:{token}         → Token de reset de contraseña → userId (TTL: 15 min)
 ```
 
 Migraciones versionadas: `001-create-users.js`, `002-...`
@@ -153,6 +156,16 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 | `fastcuber` | cuber3@speedcubers.dev | — |
 | `speedmaster` | cuber4@speedcubers.dev | — |
 
+## Convenciones de arquitectura implementadas
+
+- **`AppError`** (`src/domain/errors/AppError.js`): error tipado con `message`, `code` y `status`. Todos los servicios lo usan para errores de negocio.
+- **`handleError(err, res)`** (`src/presentation/utils/handleError.js`): helper en controllers para devolver 4xx desde AppError o 500 genérico para errores inesperados.
+- **`container.js`** (`src/infrastructure/container.js`): punto único de wiring DI — exporta `userRepository`, `wcaProfileRepository`, `wcaService`, `authService`, `authController`. Las rutas importan desde aquí.
+- **`WCA_ID_REGEX`** (`src/infrastructure/config/constants.js`): `/^[0-9]{4}[A-Z]{2,}[0-9]{2}$/` — usado por el validador Joi y el cliente WCA.
+- **`passwordField()`**: factory Joi en `auth.validator.js` — reutiliza las reglas de contraseña (min 8, mayúscula, dígito) en register, reset-password y change-password.
+- **Seguridad**: Helmet (HTTP headers), express-rate-limit (100 req/min por IP), login lockout (10 fallos → 15 min de bloqueo en Redis), `console.log` de tokens gateado por `NODE_ENV !== 'production'`.
+- **WCA ID inmutable**: una vez vinculado un WCA ID, `WcaService.validateAndLink` lanza `WCA_ALREADY_LINKED` (409). No se puede cambiar ni desvincular (excepto mediante admin).
+
 ## Migraciones y seeds
 
 El runner usa **umzug** (no sequelize-cli, que no soporta ESM).
@@ -164,9 +177,9 @@ Seeders en `src/infrastructure/database/seeders/` — solo para desarrollo, nunc
 | Fase | Contenido | Estado |
 |------|-----------|--------|
 | 0 | Setup e infraestructura | ✅ |
-| 1 | Autenticación (JWT + WCA opcional) | ⏳ Siguiente |
-| 2 | Perfiles de usuario | — |
-| 3 | Rankings + Redis cache | — |
+| 1 | Autenticación (JWT + WCA opcional) | ✅ |
+| 2 | Perfiles de usuario | ✅ |
+| 3 | Rankings + Redis cache | ⏳ Siguiente |
 | 4 | Videoconferencia (Agora.io) | — |
 | 5 | Sistema de timing | — |
 | 6 | Presencia online (Socket.io) | — |
