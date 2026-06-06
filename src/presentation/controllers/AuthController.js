@@ -79,4 +79,22 @@ export class AuthController {
       return res.status(500).json({ error: 'Internal server error' });
     }
   };
+
+  forgotPassword = async (req, res) => {
+    try {
+      await this.authService.forgotPassword(req.body.email);
+      res.json({ message: 'If the email exists, a reset link has been sent' });
+    } catch (err) {
+      res.status(err.status || 500).json({ error: err.message });
+    }
+  };
+
+  resetPassword = async (req, res) => {
+    try {
+      await this.authService.resetPassword(req.body.token, req.body.password);
+      res.json({ message: 'Password updated successfully' });
+    } catch (err) {
+      res.status(err.status || 500).json({ error: err.message });
+    }
+  };
 }

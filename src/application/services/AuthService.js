@@ -1,6 +1,8 @@
+import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { BCRYPT_SALT_ROUNDS, JWT_EXPIRES_IN, JWT_REFRESH_EXPIRES_IN } from '../../infrastructure/config/constants.js';
+import redis from '../../infrastructure/config/redis.js';
 
 export class AuthService {
   constructor(userRepository) {
@@ -82,6 +84,32 @@ export class AuthService {
       err.status = 401;
       throw err;
     }
+  }
+
+  async forgotPassword(email) {
+    const user = await this.userRepository.findByEmail(email);
+    // Always return success to avoid user enumeration
+    if (!user) return;
+
+    const token = crypto.randomBytes(32).toString('hex');
+    await redis.set(`pwd_reset:${token}`, user.id, 'EX', 900); // 15 min TTL
+
+    // No email service yet — log the token for dev use
+    console.log(`[DEV] Password reset token for ${email}: ${token}`);
+  }
+
+  async resetPassword(token, newPassword) {
+    const userId = await redis.get(`pwd_reset:${token}`);
+    if (!userId) {
+      const err = new Error('Invalid or expired reset token');
+      err.code = 'INVALID_RESET_TOKEN';
+      err.status = 400;
+      throw err;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
+    await this.userRepository.update(userId, { password_hash: passwordHash });
+    await redis.del(`pwd_reset:${token}`);
   }
 
   #generateTokens(userId) {

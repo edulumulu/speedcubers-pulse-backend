@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../../src/app.js';
 import { sequelize } from '../../src/infrastructure/database/models/index.js';
+import redis from '../../src/infrastructure/config/redis.js';
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
@@ -8,6 +9,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
+  await redis.quit();
 });
 
 beforeEach(async () => {
@@ -126,5 +128,69 @@ describe('POST /api/v1/auth/logout', () => {
   it('returns 401 without token', async () => {
     const res = await request(app).post('/api/v1/auth/logout');
     expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /api/v1/auth/forgot-password', () => {
+  it('returns 200 with success message for a known email', async () => {
+    await request(app).post('/api/v1/auth/register').send(validUser);
+
+    const res = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: validUser.email });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('If the email exists, a reset link has been sent');
+  });
+
+  it('returns 200 for unknown email (no user enumeration)', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: 'nobody@test.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('If the email exists, a reset link has been sent');
+  });
+
+  it('returns 400 for invalid email format', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: 'not-an-email' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/v1/auth/reset-password', () => {
+  it('returns 400 for an invalid or expired token', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token: 'bad-token', password: 'NewPass123!' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Invalid or expired reset token');
+  });
+
+  it('resets password successfully and allows login with new password', async () => {
+    await request(app).post('/api/v1/auth/register').send(validUser);
+
+    // Manually plant a reset token in Redis
+    const token = 'test-reset-token-integration';
+    const userRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: validUser.email, password: validUser.password });
+    // Get user id by inspecting the token payload
+    const jwt = await import('jsonwebtoken');
+    const payload = jwt.default.decode(userRes.body.tokens.accessToken);
+    await redis.set(`pwd_reset:${token}`, payload.sub, 'EX', 900);
+
+    const resetRes = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token, password: 'NewPass999!' });
+    expect(resetRes.status).toBe(200);
+    expect(resetRes.body.message).toBe('Password updated successfully');
+
+    // Login with new password should work
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: validUser.email, password: 'NewPass999!' });
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.tokens.accessToken).toBeDefined();
   });
 });

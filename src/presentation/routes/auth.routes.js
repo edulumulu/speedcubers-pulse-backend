@@ -12,6 +12,8 @@ import {
   loginSchema,
   refreshSchema,
   linkWcaSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from '../validators/auth.validator.js';
 
 const router = Router();
@@ -26,5 +28,7 @@ router.post('/refresh', validate(refreshSchema), controller.refresh);
 router.post('/logout', requireAuth, controller.logout);
 router.post('/link-wca', requireAuth, validate(linkWcaSchema), controller.linkWca);
 router.delete('/link-wca', requireAuth, controller.unlinkWca);
+router.post('/forgot-password', validate(forgotPasswordSchema), controller.forgotPassword);
+router.post('/reset-password', validate(resetPasswordSchema), controller.resetPassword);
 
 export default router;
