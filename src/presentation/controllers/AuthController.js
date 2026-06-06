@@ -42,7 +42,7 @@ export class AuthController {
   refresh = async (req, res) => {
     try {
       const { refresh_token } = req.body;
-      const tokens = this.authService.refreshTokens(refresh_token);
+      const tokens = await this.authService.refreshTokens(refresh_token);
       return res.status(200).json({ tokens });
     } catch (err) {
       if (err.status) {

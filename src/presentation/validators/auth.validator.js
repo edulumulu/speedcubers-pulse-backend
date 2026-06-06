@@ -38,6 +38,11 @@ export const linkWcaSchema = Joi.object({
     }),
 });
 
+export const checkAvailabilitySchema = Joi.object({
+  username: Joi.string().alphanum().min(2).max(20),
+  email: Joi.string().email().max(255),
+}).min(1);
+
 export const forgotPasswordSchema = Joi.object({
   email: Joi.string().email().required(),
 });
@@ -55,9 +60,9 @@ export const resetPasswordSchema = Joi.object({
     }),
 });
 
-export function validate(schema) {
+export function validate(schema, source = 'body') {
   return (req, res, next) => {
-    const { error } = schema.validate(req.body, { abortEarly: false });
+    const { error } = schema.validate(req[source], { abortEarly: false });
     if (error) {
       return res.status(400).json({
         error: 'Validation error',

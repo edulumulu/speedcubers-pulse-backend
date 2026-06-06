@@ -2,6 +2,7 @@ import request from 'supertest';
 import app from '../../src/app.js';
 import { sequelize } from '../../src/infrastructure/database/models/index.js';
 import redis from '../../src/infrastructure/config/redis.js';
+import { REDIS_LOGIN_FAIL_PREFIX, REDIS_LOGIN_LOCK_PREFIX } from '../../src/infrastructure/config/constants.js';
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
@@ -9,10 +10,16 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sequelize.close();
+  await redis.quit();
 });
 
 beforeEach(async () => {
   await sequelize.query('TRUNCATE TABLE wca_profiles, users RESTART IDENTITY CASCADE');
+  // Clear login lockout keys so tests don't bleed into each other
+  const lockKeys = await redis.keys(`${REDIS_LOGIN_LOCK_PREFIX}*`);
+  const failKeys = await redis.keys(`${REDIS_LOGIN_FAIL_PREFIX}*`);
+  const keysToDelete = [...lockKeys, ...failKeys];
+  if (keysToDelete.length > 0) await redis.del(...keysToDelete);
 });
 
 const validUser = {
@@ -144,6 +151,27 @@ describe('POST /api/v1/auth/refresh', () => {
       .post('/api/v1/auth/refresh')
       .send({ refresh_token: 'bad.token' });
     expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /api/v1/auth/login — lockout', () => {
+  beforeEach(async () => {
+    await request(app).post('/api/v1/auth/register').send(validUser);
+  });
+
+  it('returns 429 after LOGIN_LOCKOUT_ATTEMPTS consecutive wrong passwords', async () => {
+    // Trigger 10 failed attempts
+    for (let i = 0; i < 10; i++) {
+      await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: validUser.email, password: 'WrongPass123!' });
+    }
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: validUser.email, password: validUser.password });
+    expect(res.status).toBe(429);
+    expect(res.body.code).toBe('ACCOUNT_LOCKED');
   });
 });
 
