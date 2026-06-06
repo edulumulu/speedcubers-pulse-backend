@@ -43,6 +43,23 @@ export const checkAvailabilitySchema = Joi.object({
   email: Joi.string().email().max(255),
 }).min(1);
 
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+export const resetPasswordSchema = Joi.object({
+  token: Joi.string().required(),
+  password: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(/[A-Z]/, 'uppercase')
+    .pattern(/[0-9]/, 'number')
+    .required()
+    .messages({
+      'string.pattern.name': 'Password must contain at least one {#name} letter',
+    }),
+});
+
 export function validate(schema, source = 'body') {
   return (req, res, next) => {
     const { error } = schema.validate(req[source], { abortEarly: false });

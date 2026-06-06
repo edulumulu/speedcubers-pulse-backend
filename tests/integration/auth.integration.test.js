@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../../src/app.js';
 import { sequelize } from '../../src/infrastructure/database/models/index.js';
+import redis from '../../src/infrastructure/config/redis.js';
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
@@ -19,6 +20,40 @@ const validUser = {
   username: 'alice',
   password: 'Pass123!',
 };
+
+describe('GET /api/v1/auth/check', () => {
+  beforeEach(async () => {
+    await request(app).post('/api/v1/auth/register').send({
+      email: 'eduardo@speedcubers.dev',
+      username: 'edulumulu',
+      password: 'Abcd1234',
+    });
+  });
+
+  it('returns taken:true for an existing username', async () => {
+    const res = await request(app).get('/api/v1/auth/check?username=edulumulu');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ username: { taken: true } });
+  });
+
+  it('returns taken:false for a non-existing username', async () => {
+    const res = await request(app).get('/api/v1/auth/check?username=notexists');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ username: { taken: false } });
+  });
+
+  it('returns taken:true for an existing email', async () => {
+    const res = await request(app).get('/api/v1/auth/check?email=eduardo@speedcubers.dev');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ email: { taken: true } });
+  });
+
+  it('returns 400 when no params are provided', async () => {
+    const res = await request(app).get('/api/v1/auth/check');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Provide username or email');
+  });
+});
 
 describe('POST /api/v1/auth/register', () => {
   it('creates a user and returns 201 with tokens', async () => {
@@ -147,5 +182,69 @@ describe('POST /api/v1/auth/logout', () => {
   it('returns 401 without token', async () => {
     const res = await request(app).post('/api/v1/auth/logout');
     expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /api/v1/auth/forgot-password', () => {
+  it('returns 200 with success message for a known email', async () => {
+    await request(app).post('/api/v1/auth/register').send(validUser);
+
+    const res = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: validUser.email });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('If the email exists, a reset link has been sent');
+  });
+
+  it('returns 200 for unknown email (no user enumeration)', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: 'nobody@test.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('If the email exists, a reset link has been sent');
+  });
+
+  it('returns 400 for invalid email format', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: 'not-an-email' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/v1/auth/reset-password', () => {
+  it('returns 400 for an invalid or expired token', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token: 'bad-token', password: 'NewPass123!' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Invalid or expired reset token');
+  });
+
+  it('resets password successfully and allows login with new password', async () => {
+    await request(app).post('/api/v1/auth/register').send(validUser);
+
+    // Manually plant a reset token in Redis
+    const token = 'test-reset-token-integration';
+    const userRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: validUser.email, password: validUser.password });
+    // Get user id by inspecting the token payload
+    const jwt = await import('jsonwebtoken');
+    const payload = jwt.default.decode(userRes.body.tokens.accessToken);
+    await redis.set(`pwd_reset:${token}`, payload.sub, 'EX', 900);
+
+    const resetRes = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token, password: 'NewPass999!' });
+    expect(resetRes.status).toBe(200);
+    expect(resetRes.body.message).toBe('Password updated successfully');
+
+    // Login with new password should work
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: validUser.email, password: 'NewPass999!' });
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.tokens.accessToken).toBeDefined();
   });
 });
