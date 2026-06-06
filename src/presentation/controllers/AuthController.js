@@ -79,4 +79,41 @@ export class AuthController {
       return res.status(500).json({ error: 'Internal server error' });
     }
   };
+
+  forgotPassword = async (req, res) => {
+    try {
+      await this.authService.forgotPassword(req.body.email);
+      res.json({ message: 'If the email exists, a reset link has been sent' });
+    } catch (err) {
+      res.status(err.status || 500).json({ error: err.message });
+    }
+  };
+
+  resetPassword = async (req, res) => {
+    try {
+      await this.authService.resetPassword(req.body.token, req.body.password);
+      res.json({ message: 'Password updated successfully' });
+    } catch (err) {
+      res.status(err.status || 500).json({ error: err.message });
+    }
+  };
+
+  checkAvailability = async (req, res) => {
+    try {
+      const { username, email } = req.query;
+      const result = {};
+      const checks = [];
+      if (username) checks.push(
+        this.authService.isUsernameTaken(username).then(taken => { result.username = { taken }; }),
+      );
+      if (email) checks.push(
+        this.authService.isEmailTaken(email).then(taken => { result.email = { taken }; }),
+      );
+      if (!checks.length) return res.status(400).json({ error: 'Provide username or email' });
+      await Promise.all(checks);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
 }
