@@ -9,3 +9,7 @@ export const COMPETITION_TIMEOUT_MS = 5 * 60 * 1000;
 export const TIMER_MAX_SECONDS = 600;
 export const PRESENCE_HEARTBEAT_MS = 30 * 1000;
 export const PRESENCE_EXPIRY_MS = 2 * 60 * 1000;
+export const PWD_RESET_TTL_SECONDS = 900;
+export const REDIS_LOGIN_FAIL_PREFIX = 'login_fail:';
+export const REDIS_LOGIN_LOCK_PREFIX = 'login_lock:';
+export const REDIS_PWD_RESET_PREFIX = 'pwd_reset:';

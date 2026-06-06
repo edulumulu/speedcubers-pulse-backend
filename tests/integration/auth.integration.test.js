@@ -112,6 +112,27 @@ describe('POST /api/v1/auth/refresh', () => {
   });
 });
 
+describe('POST /api/v1/auth/login — lockout', () => {
+  beforeEach(async () => {
+    await request(app).post('/api/v1/auth/register').send(validUser);
+  });
+
+  it('returns 429 after LOGIN_LOCKOUT_ATTEMPTS consecutive wrong passwords', async () => {
+    // Trigger 10 failed attempts
+    for (let i = 0; i < 10; i++) {
+      await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: validUser.email, password: 'WrongPass123!' });
+    }
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: validUser.email, password: validUser.password });
+    expect(res.status).toBe(429);
+    expect(res.body.code).toBe('ACCOUNT_LOCKED');
+  });
+});
+
 describe('POST /api/v1/auth/logout', () => {
   it('returns 204 for authenticated user', async () => {
     const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);

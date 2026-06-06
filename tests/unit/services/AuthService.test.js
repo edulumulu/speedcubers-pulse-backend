@@ -1,5 +1,18 @@
 import { jest } from '@jest/globals';
-import { AuthService } from '../../../src/application/services/AuthService.js';
+
+const mockRedis = {
+  get: jest.fn(),
+  set: jest.fn(),
+  incr: jest.fn(),
+  expire: jest.fn(),
+  del: jest.fn(),
+};
+
+jest.unstable_mockModule('../../../src/infrastructure/config/redis.js', () => ({
+  default: mockRedis,
+}));
+
+const { AuthService } = await import('../../../src/application/services/AuthService.js');
 
 const mockUserRepository = {
   findByEmail: jest.fn(),
@@ -13,6 +26,13 @@ beforeEach(() => {
   jest.clearAllMocks();
   process.env.JWT_SECRET = 'test-secret';
   process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+
+  // Default Redis: no lock, 0 fails
+  mockRedis.get.mockResolvedValue(null);
+  mockRedis.incr.mockResolvedValue(1);
+  mockRedis.expire.mockResolvedValue(1);
+  mockRedis.set.mockResolvedValue('OK');
+  mockRedis.del.mockResolvedValue(1);
 });
 
 describe('AuthService.register', () => {
@@ -107,6 +127,61 @@ describe('AuthService.login', () => {
     const svc = makeService();
     await expect(svc.login({ email: 'a@b.com', password: 'Wrong123!' }))
       .rejects.toMatchObject({ code: 'INVALID_CREDENTIALS', status: 401 });
+  });
+
+  it('returns 429 ACCOUNT_LOCKED when lockKey exists in Redis', async () => {
+    mockRedis.get.mockResolvedValue('1');
+    mockUserRepository.findByEmail.mockResolvedValue({
+      id: 'uuid-1',
+      passwordHash: 'hash',
+      toPrivate: () => ({}),
+    });
+
+    const svc = makeService();
+    await expect(svc.login({ email: 'a@b.com', password: 'Pass123!' }))
+      .rejects.toMatchObject({ code: 'ACCOUNT_LOCKED', status: 429 });
+  });
+
+  it('sets lockout after LOGIN_LOCKOUT_ATTEMPTS failures', async () => {
+    const bcrypt = await import('bcrypt');
+    const hash = await bcrypt.hash('Correct123!', 12);
+
+    mockUserRepository.findByEmail.mockResolvedValue({
+      id: 'uuid-1',
+      passwordHash: hash,
+      toPrivate: () => ({}),
+    });
+
+    // Simulate the 10th failure (incr returns 10)
+    mockRedis.incr.mockResolvedValue(10);
+
+    const svc = makeService();
+    await expect(svc.login({ email: 'a@b.com', password: 'Wrong123!' }))
+      .rejects.toMatchObject({ code: 'INVALID_CREDENTIALS', status: 401 });
+
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      expect.stringContaining('login_lock:a@b.com'),
+      '1',
+      'EX',
+      expect.any(Number),
+    );
+    expect(mockRedis.del).toHaveBeenCalledWith(expect.stringContaining('login_fail:a@b.com'));
+  });
+
+  it('clears fail counter on successful login', async () => {
+    const bcrypt = await import('bcrypt');
+    const hash = await bcrypt.hash('Pass123!', 12);
+
+    mockUserRepository.findByEmail.mockResolvedValue({
+      id: 'uuid-1',
+      passwordHash: hash,
+      toPrivate: () => ({ id: 'uuid-1', email: 'a@b.com', username: 'alice' }),
+    });
+
+    const svc = makeService();
+    await svc.login({ email: 'a@b.com', password: 'Pass123!' });
+
+    expect(mockRedis.del).toHaveBeenCalledWith(expect.stringContaining('login_fail:a@b.com'));
   });
 });
 

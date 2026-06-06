@@ -1,6 +1,15 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { BCRYPT_SALT_ROUNDS, JWT_EXPIRES_IN, JWT_REFRESH_EXPIRES_IN } from '../../infrastructure/config/constants.js';
+import {
+  BCRYPT_SALT_ROUNDS,
+  JWT_EXPIRES_IN,
+  JWT_REFRESH_EXPIRES_IN,
+  LOGIN_LOCKOUT_ATTEMPTS,
+  LOGIN_LOCKOUT_DURATION_MS,
+  REDIS_LOGIN_FAIL_PREFIX,
+  REDIS_LOGIN_LOCK_PREFIX,
+} from '../../infrastructure/config/constants.js';
+import redis from '../../infrastructure/config/redis.js';
 
 export class AuthService {
   constructor(userRepository) {
@@ -46,14 +55,34 @@ export class AuthService {
       throw err;
     }
 
+    // Check lockout
+    const lockKey = `${REDIS_LOGIN_LOCK_PREFIX}${email}`;
+    const failKey = `${REDIS_LOGIN_FAIL_PREFIX}${email}`;
+    const locked = await redis.get(lockKey);
+    if (locked) {
+      const err = new Error('Account temporarily locked due to too many failed attempts');
+      err.code = 'ACCOUNT_LOCKED';
+      err.status = 429;
+      throw err;
+    }
+
     const valid = await bcrypt.compare(password, user.passwordHash);
 
     if (!valid) {
+      const fails = await redis.incr(failKey);
+      await redis.expire(failKey, Math.floor(LOGIN_LOCKOUT_DURATION_MS / 1000));
+      if (fails >= LOGIN_LOCKOUT_ATTEMPTS) {
+        await redis.set(lockKey, '1', 'EX', Math.floor(LOGIN_LOCKOUT_DURATION_MS / 1000));
+        await redis.del(failKey);
+      }
       const err = new Error('Invalid credentials');
       err.code = 'INVALID_CREDENTIALS';
       err.status = 401;
       throw err;
     }
+
+    // Clear fail counter on success
+    await redis.del(failKey);
 
     return {
       user: user.toPrivate(),
