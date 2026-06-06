@@ -66,7 +66,7 @@ export class UserService {
       updatedFields.email = data.email;
     }
 
-    if (data.username !== undefined) {
+    if (data.username !== undefined && data.username !== user.username) {
       if (!user.canChangeUsername()) {
         const err = new Error('Username can only be changed once every 30 days');
         err.code = 'USERNAME_CHANGE_TOO_SOON';
@@ -86,10 +86,11 @@ export class UserService {
   }
 
   async deleteMe(userId) {
+    const shortId = userId.replace(/-/g, '').slice(0, 12);
     await this.userRepository.update(userId, {
-      deleted_at: new Date(),
-      email: `deleted_${userId}@deleted`,
-      username: `deleted_${userId}`,
+      email: `del_${shortId}@deleted.invalid`,
+      username: `del_${shortId}`,
     });
+    await this.userRepository.delete(userId);
   }
 }
