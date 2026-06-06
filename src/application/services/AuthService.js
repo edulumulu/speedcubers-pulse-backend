@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { AppError } from '../../domain/errors/AppError.js';
 import {
   BCRYPT_SALT_ROUNDS,
   JWT_EXPIRES_IN,
@@ -24,17 +25,11 @@ export class AuthService {
     ]);
 
     if (existingEmail) {
-      const err = new Error('Email already in use');
-      err.code = 'EMAIL_TAKEN';
-      err.status = 409;
-      throw err;
+      throw new AppError('Email already in use', 'EMAIL_TAKEN', 409);
     }
 
     if (existingUsername) {
-      const err = new Error('Username already in use');
-      err.code = 'USERNAME_TAKEN';
-      err.status = 409;
-      throw err;
+      throw new AppError('Username already in use', 'USERNAME_TAKEN', 409);
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
@@ -50,10 +45,7 @@ export class AuthService {
     const user = await this.userRepository.findByEmail(email);
 
     if (!user) {
-      const err = new Error('Invalid credentials');
-      err.code = 'INVALID_CREDENTIALS';
-      err.status = 401;
-      throw err;
+      throw new AppError('Invalid credentials', 'INVALID_CREDENTIALS', 401);
     }
 
     // Check lockout
@@ -61,10 +53,7 @@ export class AuthService {
     const failKey = `${REDIS_LOGIN_FAIL_PREFIX}${email}`;
     const locked = await redis.get(lockKey);
     if (locked) {
-      const err = new Error('Account temporarily locked due to too many failed attempts');
-      err.code = 'ACCOUNT_LOCKED';
-      err.status = 429;
-      throw err;
+      throw new AppError('Account temporarily locked due to too many failed attempts', 'ACCOUNT_LOCKED', 429);
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
@@ -76,10 +65,7 @@ export class AuthService {
         await redis.set(lockKey, '1', 'EX', Math.floor(LOGIN_LOCKOUT_DURATION_MS / 1000));
         await redis.del(failKey);
       }
-      const err = new Error('Invalid credentials');
-      err.code = 'INVALID_CREDENTIALS';
-      err.status = 401;
-      throw err;
+      throw new AppError('Invalid credentials', 'INVALID_CREDENTIALS', 401);
     }
 
     // Clear fail counter on success
@@ -96,10 +82,7 @@ export class AuthService {
       const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
       return this.#generateTokens(payload.sub);
     } catch {
-      const err = new Error('Invalid refresh token');
-      err.code = 'INVALID_TOKEN';
-      err.status = 401;
-      throw err;
+      throw new AppError('Invalid refresh token', 'INVALID_TOKEN', 401);
     }
   }
 
@@ -107,10 +90,7 @@ export class AuthService {
     try {
       return jwt.verify(token, process.env.JWT_SECRET);
     } catch {
-      const err = new Error('Invalid token');
-      err.code = 'INVALID_TOKEN';
-      err.status = 401;
-      throw err;
+      throw new AppError('Invalid token', 'INVALID_TOKEN', 401);
     }
   }
 

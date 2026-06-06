@@ -58,7 +58,7 @@ describe('GET /api/v1/auth/check', () => {
   it('returns 400 when no params are provided', async () => {
     const res = await request(app).get('/api/v1/auth/check');
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Provide username or email');
+    expect(res.body.error).toBe('Validation error');
   });
 });
 

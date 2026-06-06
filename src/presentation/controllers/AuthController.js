@@ -1,3 +1,5 @@
+import { handleError } from '../utils/handleError.js';
+
 export class AuthController {
   constructor(authService, wcaService) {
     this.authService = authService;
@@ -19,10 +21,7 @@ export class AuthController {
 
       return res.status(201).json(result);
     } catch (err) {
-      if (err.status) {
-        return res.status(err.status).json({ error: err.message, code: err.code });
-      }
-      return res.status(500).json({ error: 'Internal server error' });
+      handleError(err, res);
     }
   };
 
@@ -32,10 +31,7 @@ export class AuthController {
       const result = await this.authService.login({ email, password });
       return res.status(200).json(result);
     } catch (err) {
-      if (err.status) {
-        return res.status(err.status).json({ error: err.message, code: err.code });
-      }
-      return res.status(500).json({ error: 'Internal server error' });
+      handleError(err, res);
     }
   };
 
@@ -45,10 +41,7 @@ export class AuthController {
       const tokens = await this.authService.refreshTokens(refresh_token);
       return res.status(200).json({ tokens });
     } catch (err) {
-      if (err.status) {
-        return res.status(err.status).json({ error: err.message, code: err.code });
-      }
-      return res.status(500).json({ error: 'Internal server error' });
+      handleError(err, res);
     }
   };
 
@@ -64,10 +57,7 @@ export class AuthController {
       const profile = await this.wcaService.validateAndLink(req.userId, wca_id);
       return res.status(200).json({ wcaProfile: profile });
     } catch (err) {
-      if (err.status) {
-        return res.status(err.status).json({ error: err.message, code: err.code });
-      }
-      return res.status(500).json({ error: 'Internal server error' });
+      handleError(err, res);
     }
   };
 
@@ -75,8 +65,8 @@ export class AuthController {
     try {
       await this.wcaService.unlink(req.userId);
       return res.status(204).send();
-    } catch {
-      return res.status(500).json({ error: 'Internal server error' });
+    } catch (err) {
+      handleError(err, res);
     }
   };
 
