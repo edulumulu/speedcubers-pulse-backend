@@ -64,16 +64,15 @@ export async function fetchWcaEventRanking(wcaId, event) {
       timeout: 5000,
     });
 
-    const rankings = data.rankings ?? [];
-    const eventRanking = rankings.find(
-      (r) => r.event_id === wcaEvent && r.type === 'average',
-    );
+    const records = data.personal_records ?? {};
+    const eventRecord = records[wcaEvent];
+    const avg = eventRecord?.average;
 
-    if (!eventRanking) return null;
+    if (!avg) return null;
 
     return {
-      rank: eventRanking.world_rank ?? null,
-      average: eventRanking.best ? eventRanking.best / 100 : null, // centiseconds → seconds
+      rank: avg.world_rank ?? null,
+      average: avg.best ? avg.best / 100 : null, // centiseconds → seconds
     };
   } catch {
     return null;
