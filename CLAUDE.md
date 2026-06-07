@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fase 0 completada (setup). Próxima: Fase 1 (Autenticación).
+**Estado actual**: Fases 0, 1 y 2 completadas. Próxima: Fase 3 (Rankings + Redis cache).
 
 ## Arquitectura
 
@@ -108,13 +108,14 @@ Todas las tablas, columnas, migraciones, modelos Sequelize, Redis keys y eventos
 
 Redis keys:
 ```
-ranking:top:100           → Array top 100
-user:{id}:stats           → Stats de usuario
-online:users              → Set de usuarios online
-competition:{id}          → Estado de competencia activa
-login_fail:{email}        → Contador de intentos fallidos de login (TTL: 15 min)
-login_lock:{email}        → Bloqueo de cuenta activo (TTL: 15 min)
-pwd_reset:{token}         → Token de reset de contraseña → userId (TTL: 15 min)
+ranking:top:100:{event}        → Array top 100 por evento (TTL 5 min)
+user:{id}:stats                → Stats y Elo de usuario (TTL 5 min)
+wca:ranking:{user_id}:{event}  → Ranking WCA oficial del usuario en ese evento (TTL 24h)
+online:users                   → Set de usuarios online
+competition:{id}               → Estado de competencia activa
+login_fail:{email}             → Contador de intentos fallidos de login (TTL: 15 min)
+login_lock:{email}             → Bloqueo de cuenta activo (TTL: 15 min)
+pwd_reset:{token}              → Token de reset de contraseña → userId (TTL: 15 min)
 ```
 
 Migraciones versionadas: `001-create-users.js`, `002-...`
@@ -171,6 +172,21 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 El runner usa **umzug** (no sequelize-cli, que no soporta ESM).
 Scripts en `scripts/migrate.js` y `scripts/seed.js`.
 Seeders en `src/infrastructure/database/seeders/` — solo para desarrollo, nunca en producción.
+
+## Fases del MVP
+
+## Ranking — Sistema Elo
+
+**K-factor**: 32 (fijo). **Elo inicial**: 1000. **Suma cero** por partida.
+
+```
+E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
+Δ    = 32 × (W - E(A))          W=1 ganador, W=0 perdedor
+```
+
+- DNF = pérdida (W=0) para el que falla; el oponente gana (W=1). Sin penalización adicional.
+- Elo se actualiza tras **cada match individual**.
+- Ranking WCA oficial por evento: se obtiene de la WCA API y se cachea en `wca:ranking:{user_id}:{event}` con TTL 24h. **No se persiste en PostgreSQL**.
 
 ## Fases del MVP
 
