@@ -1,6 +1,7 @@
 import { Sequelize } from 'sequelize';
 import { initUser } from './User.js';
 import { initWcaProfile } from './WcaProfile.js';
+import { defineRanking } from './Ranking.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const config = require('../config.cjs');
@@ -17,6 +18,7 @@ export const sequelize = new Sequelize(dbConfig.url, {
 const models = {
   User: initUser(sequelize),
   WcaProfile: initWcaProfile(sequelize),
+  Ranking: defineRanking(sequelize),
 };
 
 Object.values(models).forEach((model) => {

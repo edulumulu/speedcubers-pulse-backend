@@ -14,8 +14,9 @@ import {
 import redis from '../../infrastructure/config/redis.js';
 
 export class AuthService {
-  constructor(userRepository) {
+  constructor(userRepository, rankingRepository = null) {
     this.userRepository = userRepository;
+    this.rankingRepository = rankingRepository;
   }
 
   async register({ email, username, password }) {
@@ -34,6 +35,11 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
     const user = await this.userRepository.create({ email, username, passwordHash });
+
+    // Create initial ranking row with default Elo 1000
+    if (this.rankingRepository) {
+      await this.rankingRepository.upsert(user.id, {});
+    }
 
     return {
       user: user.toPrivate(),

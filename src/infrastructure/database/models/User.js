@@ -3,6 +3,7 @@ import { DataTypes, Model } from 'sequelize';
 export class User extends Model {
   static associate(models) {
     User.hasOne(models.WcaProfile, { foreignKey: 'user_id', as: 'wcaProfile' });
+    User.hasOne(models.Ranking, { foreignKey: 'user_id', as: 'ranking' });
   }
 }
 
