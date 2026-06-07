@@ -104,7 +104,7 @@ export class RankingService {
 
     const result = await Promise.all(
       rows.map(async (row, index) => {
-        const wcaId = row.wca_profile?.wca_id ?? null;
+        const wcaId = row.user?.wcaProfile?.wca_id ?? null;
         let wcaRanking = null;
 
         if (wcaId) {
@@ -148,9 +148,7 @@ export class RankingService {
     const row = await this.rankingRepository.findByUserId(userId);
     if (!row) return null;
 
-    // Fetch WCA ranking if user has a wca_profile (need to join through repo)
-    // The ranking row may not have wca_profile loaded — we query it separately via repository
-    const wcaId = row.wca_profile?.wca_id ?? null;
+    const wcaId = row.user?.wcaProfile?.wca_id ?? null;
     let wcaRanking = null;
 
     if (wcaId) {
@@ -183,14 +181,14 @@ export class RankingService {
   // --- helpers ---
 
   _newPb(currentPb, newTime) {
-    if (newTime == null) return currentPb;
-    if (currentPb == null) return newTime;
+    if (newTime === null || newTime === undefined) return currentPb;
+    if (currentPb === null || currentPb === undefined) return newTime;
     return Math.min(currentPb, newTime);
   }
 
   _newAverage(currentAvg, newTime, validMatchCount) {
-    if (newTime == null) return currentAvg;
-    if (currentAvg == null || validMatchCount === 0) return newTime;
+    if (newTime === null || newTime === undefined) return currentAvg;
+    if (currentAvg === null || currentAvg === undefined || validMatchCount === 0) return newTime;
     // Running cumulative average
     return (currentAvg * validMatchCount + newTime) / (validMatchCount + 1);
   }

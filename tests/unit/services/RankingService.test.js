@@ -11,14 +11,14 @@ describe('calculateElo', () => {
   });
 
   test('strong favorite wins — small gain', () => {
-    const { newEloWinner, newEloLoser } = calculateElo(1400, 1000);
+    const { newEloWinner } = calculateElo(1400, 1000);
     expect(newEloWinner).toBeGreaterThan(1400);
-    expect(newEloWinner - 1400).toBeLessThan(10); // small gain for favorite
+    expect(newEloWinner - 1400).toBeLessThan(10);
   });
 
   test('underdog wins — large gain', () => {
-    const { newEloWinner, newEloLoser } = calculateElo(1000, 1400);
-    expect(newEloWinner - 1000).toBeGreaterThan(25); // big gain for underdog
+    const { newEloWinner } = calculateElo(1000, 1400);
+    expect(newEloWinner - 1000).toBeGreaterThan(25);
   });
 
   test('is zero-sum: total Elo is preserved', () => {

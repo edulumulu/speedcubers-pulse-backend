@@ -3,7 +3,6 @@ import { DataTypes, Model } from 'sequelize';
 export class Ranking extends Model {
   static associate(models) {
     Ranking.belongsTo(models.User, { foreignKey: 'user_id', as: 'user' });
-    Ranking.belongsTo(models.WcaProfile, { foreignKey: 'user_id', targetKey: 'user_id', as: 'wca_profile' });
   }
 }
 

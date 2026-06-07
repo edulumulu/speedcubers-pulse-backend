@@ -109,7 +109,7 @@ export class AuthService {
     await redis.set(`pwd_reset:${token}`, user.id, 'EX', 900); // 15 min TTL
 
     // No email service yet — log the token for dev use
-    console.log(`[DEV] Password reset token for ${email}: ${token}`);
+    console.warn(`[DEV] Password reset token for ${email}: ${token}`);
   }
 
   async resetPassword(token, newPassword) {

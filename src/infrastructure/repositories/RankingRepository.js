@@ -6,7 +6,25 @@ export class RankingRepository {
   }
 
   async findByUserId(userId) {
-    return this.Ranking.findOne({ where: { user_id: userId } });
+    return this.Ranking.findOne({
+      where: { user_id: userId },
+      include: [
+        {
+          model: this.User,
+          as: 'user',
+          attributes: ['id', 'username'],
+          required: false,
+          include: [
+            {
+              model: this.WcaProfile,
+              as: 'wcaProfile',
+              attributes: ['wca_id'],
+              required: false,
+            },
+          ],
+        },
+      ],
+    });
   }
 
   async upsert(userId, fields) {
@@ -28,12 +46,14 @@ export class RankingRepository {
           attributes: ['id', 'username'],
           where: { deleted_at: null },
           required: true,
-        },
-        {
-          model: this.WcaProfile,
-          as: 'wca_profile',
-          attributes: ['wca_id'],
-          required: false,
+          include: [
+            {
+              model: this.WcaProfile,
+              as: 'wcaProfile',
+              attributes: ['wca_id'],
+              required: false,
+            },
+          ],
         },
       ],
     });
