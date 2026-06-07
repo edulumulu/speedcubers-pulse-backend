@@ -13,3 +13,4 @@ export const PWD_RESET_TTL_SECONDS = 900;
 export const REDIS_LOGIN_FAIL_PREFIX = 'login_fail:';
 export const REDIS_LOGIN_LOCK_PREFIX = 'login_lock:';
 export const REDIS_PWD_RESET_PREFIX = 'pwd_reset:';
+export const WCA_ID_REGEX = /^[0-9]{4}[A-Z]{2,}[0-9]{2}$/;

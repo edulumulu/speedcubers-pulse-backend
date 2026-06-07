@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { WCA_ID_REGEX } from '../config/constants.js';
 
 const WCA_API_BASE = process.env.WCA_API_BASE_URL || 'https://www.worldcubeassociation.org/api/v0';
 
@@ -7,7 +8,7 @@ const WCA_API_BASE = process.env.WCA_API_BASE_URL || 'https://www.worldcubeassoc
  * Format: 4 digits + 2+ uppercase letters + 2 digits (e.g. 2022LUCA04)
  */
 function isValidWcaIdFormat(wcaId) {
-  return /^[0-9]{4}[A-Z]{2,}[0-9]{2}$/.test(wcaId);
+  return WCA_ID_REGEX.test(wcaId);
 }
 
 /**
