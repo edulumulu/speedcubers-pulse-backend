@@ -17,6 +17,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await sequelize.query('TRUNCATE TABLE rankings, wca_profiles, users RESTART IDENTITY CASCADE');
+  await cacheService.client.flushDb();
 });
 
 describe('GET /api/v1/ranking', () => {
