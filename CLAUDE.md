@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2 y 3 completadas. Próxima: Fase 4 (Videoconferencia Agora.io).
+**Estado actual**: Fases 0, 1, 2 y 3 completadas. Fase 4 (Videoconferencia Agora.io) en progreso: token RTC backend implementado.
 
 ## Arquitectura
 
@@ -32,6 +32,7 @@ Dependency injection manual: `new UserService(userRepository, wcaService)`. Sin 
 - Jest 29 (tests)
 - Winston 3 (logging)
 - bcrypt 5, jsonwebtoken 9
+- agora-token (generación de tokens RTC de Agora)
 
 ## Convenciones de commits
 
@@ -196,7 +197,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 1 | Autenticación (JWT + WCA opcional) | ✅ |
 | 2 | Perfiles de usuario | ✅ |
 | 3 | Rankings + Redis cache | ✅ |
-| 4 | Videoconferencia (Agora.io) | — |
+| 4 | Videoconferencia (Agora.io): endpoint `POST /api/v1/video/token` | ⏳ |
 | 5 | Sistema de timing | — |
 | 6 | Presencia online (Socket.io) | — |
 | 7 | Integración, e2e, polish | — |

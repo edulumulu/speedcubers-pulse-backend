@@ -255,3 +255,44 @@ describe('POST /api/v1/auth/reset-password', () => {
     expect(loginRes.body.tokens.accessToken).toBeDefined();
   });
 });
+
+describe('POST /api/v1/video/token', () => {
+  it('returns 401 without token', async () => {
+    const res = await request(app)
+      .post('/api/v1/video/token')
+      .send({ channelName: 'match-test' });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns a video token for an authenticated user', async () => {
+    const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);
+    const { accessToken } = registerRes.body.tokens;
+
+    const res = await request(app)
+      .post('/api/v1/video/token')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ channelName: 'match-test', uid: 123 });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      appId: process.env.AGORA_APP_ID,
+      channelName: 'match-test',
+      uid: 123,
+    });
+    expect(res.body.token).toEqual(expect.stringMatching(/^007/));
+    expect(res.body.expiresAt).toBeDefined();
+  });
+
+  it('returns 400 for invalid channel name', async () => {
+    const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);
+    const { accessToken } = registerRes.body.tokens;
+
+    const res = await request(app)
+      .post('/api/v1/video/token')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ channelName: 'bad channel name' });
+
+    expect(res.status).toBe(400);
+  });
+});
