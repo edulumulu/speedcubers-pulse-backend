@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 jobs:
   lint:
@@ -32,20 +33,6 @@ jobs:
       REDIS_URL: redis://localhost:6379/1
       JWT_SECRET: ci-test-secret-not-for-production
       JWT_REFRESH_SECRET: ci-test-refresh-secret-not-for-production
-    services:
-      postgres:
-        image: postgres:14-alpine
-        env:
-          POSTGRES_USER: speedcubers
-          POSTGRES_PASSWORD: speedcubers
-          POSTGRES_DB: speedcubers_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -60,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:14-alpine
+        image: public.ecr.aws/docker/library/postgres:14-alpine
         env:
           POSTGRES_USER: speedcubers
           POSTGRES_PASSWORD: speedcubers
@@ -73,7 +60,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis:7-alpine
+        image: public.ecr.aws/docker/library/redis:7-alpine
         ports:
           - 6379:6379
         options: >-
@@ -101,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:14-alpine
+        image: public.ecr.aws/docker/library/postgres:14-alpine
         env:
           POSTGRES_USER: speedcubers
           POSTGRES_PASSWORD: speedcubers
@@ -114,7 +101,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       redis:
-        image: redis:7-alpine
+        image: public.ecr.aws/docker/library/redis:7-alpine
         ports:
           - 6379:6379
         options: >-
