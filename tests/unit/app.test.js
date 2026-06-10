@@ -1,5 +1,10 @@
 import request from 'supertest';
 import app from '../../src/app.js';
+import redis from '../../src/infrastructure/config/redis.js';
+
+afterAll(async () => {
+  await redis.quit();
+});
 
 describe('GET /health', () => {
   it('returns status ok', async () => {
