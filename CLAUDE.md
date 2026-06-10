@@ -31,7 +31,7 @@ Dependency injection manual: `new UserService(userRepository, wcaService)`. Sin 
 - Joi 17 (validación de inputs)
 - Jest 29 (tests)
 - Winston 3 (logging)
-- bcrypt 5, jsonwebtoken 9
+- bcrypt 6, jsonwebtoken 9
 - agora-token (generación de tokens RTC de Agora)
 
 ## Convenciones de commits
