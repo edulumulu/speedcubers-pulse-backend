@@ -2,6 +2,7 @@ import request from 'supertest';
 import app from '../../src/app.js';
 import { sequelize } from '../../src/infrastructure/database/models/index.js';
 import { cacheService } from '../../src/infrastructure/cache/CacheService.js';
+import redis from '../../src/infrastructure/config/redis.js';
 
 const VALID_PASSWORD = 'Abcd1234';
 
@@ -13,6 +14,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await sequelize.close();
   await cacheService.disconnect();
+  await redis.quit();
 });
 
 beforeEach(async () => {
