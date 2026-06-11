@@ -10,7 +10,6 @@ export class VideoController {
       const token = this.videoService.createRtcToken({
         userId: req.userId,
         channelName: req.body.channelName,
-        uid: req.body.uid,
       });
 
       return res.status(200).json(token);
