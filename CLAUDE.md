@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2 y 3 completadas. Fase 4C (salas de competición con Agora.io) en progreso: salas persistidas con código y token RTC backend implementados.
+**Estado actual**: Fases 0, 1, 2, 3 y 4C completadas. Fase 5A implementada: timer local en frontend y submit básico de resultados por ronda.
 
 ## Arquitectura
 
@@ -20,7 +20,7 @@ infrastructure/ → domain/
 
 Dependency injection manual: `new UserService(userRepository, wcaService)`. Sin frameworks de DI.
 
-**Decisión crítica**: el timer de competencia corre 100% en el cliente. El servidor solo valida rango (0–600s). No confiar en timestamps del cliente para seguridad.
+**Decisión crítica**: el timer de competencia corre 100% en el cliente. El servidor valida rango (0–600s), persiste resultados por ronda y calcula `final_time_ms`; no confiar en timestamps del cliente para seguridad.
 
 ## Stack
 
@@ -88,7 +88,7 @@ Targets:
 
 ## Base de datos
 
-Tablas principales: `users`, `wca_profiles`, `competitions`, `results`, `rankings`
+Tablas principales: `users`, `wca_profiles`, `competitions`, `competition_rounds`, `results`, `rankings`
 
 `wca_profiles` almacena únicamente `wca_id` y `country_iso2`. Nombre, foto, rankings y competiciones se consultan en tiempo real desde la WCA API — nunca se persisten (ver ADR-007 en la spec).
 
@@ -96,6 +96,7 @@ Tablas principales: `users`, `wca_profiles`, `competitions`, `results`, `ranking
 |-----------------------------|-------------------|
 | `usuarios` | `users` |
 | `competencias` | `competitions` |
+| `rondas_competencia` | `competition_rounds` |
 | `resultados` | `results` |
 | `ranking` | `rankings` |
 | `usuario_id` | `user_id` |
@@ -119,7 +120,7 @@ login_lock:{email}             → Bloqueo de cuenta activo (TTL: 15 min)
 pwd_reset:{token}              → Token de reset de contraseña → userId (TTL: 15 min)
 ```
 
-Migraciones versionadas: `001-create-users.js`, `002-create-rankings.js`, `003-create-wca-profiles.js`, `004-create-competitions.js`.
+Migraciones versionadas: `001-create-users.js`, `002-create-rankings.js`, `003-create-wca-profiles.js`, `004-create-competitions.js`, `005-create-results.js`.
 
 ## Variables de entorno
 
@@ -197,8 +198,9 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 1 | Autenticación (JWT + WCA opcional) | ✅ |
 | 2 | Perfiles de usuario | ✅ |
 | 3 | Rankings + Redis cache | ✅ |
-| 4C | Salas de competición con Agora.io: `POST /api/v1/competitions`, `POST /api/v1/competitions/join`, `GET /api/v1/competitions/:code`, token RTC | ⏳ |
-| 5 | Sistema de timing | — |
+| 4C | Salas de competición con Agora.io: `POST /api/v1/competitions`, `POST /api/v1/competitions/join`, `GET /api/v1/competitions/:code`, token RTC | ✅ |
+| 5A | Submit básico de resultados por ronda: `competition_rounds`, `results`, `POST /api/v1/competitions/:code/results` | ✅ |
+| 5B | Cierre de match, ganador, Elo/ranking | — |
 | 6 | Presencia online (Socket.io) | — |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |

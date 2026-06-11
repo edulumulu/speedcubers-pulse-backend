@@ -4,6 +4,7 @@ export class Competition extends Model {
   static associate(models) {
     Competition.belongsTo(models.User, { foreignKey: 'host_user_id', as: 'host' });
     Competition.belongsTo(models.User, { foreignKey: 'guest_user_id', as: 'guest' });
+    Competition.hasMany(models.CompetitionRound, { foreignKey: 'competition_id', as: 'rounds' });
   }
 }
 

@@ -6,6 +6,7 @@ export class User extends Model {
     User.hasOne(models.Ranking, { foreignKey: 'user_id', as: 'ranking' });
     User.hasMany(models.Competition, { foreignKey: 'host_user_id', as: 'hostedCompetitions' });
     User.hasMany(models.Competition, { foreignKey: 'guest_user_id', as: 'joinedCompetitions' });
+    User.hasMany(models.Result, { foreignKey: 'user_id', as: 'results' });
   }
 }
 
