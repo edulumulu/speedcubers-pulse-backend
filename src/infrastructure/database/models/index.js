@@ -2,6 +2,7 @@ import { Sequelize } from 'sequelize';
 import { initUser } from './User.js';
 import { initWcaProfile } from './WcaProfile.js';
 import { defineRanking } from './Ranking.js';
+import { defineCompetition } from './Competition.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const config = require('../config.cjs');
@@ -19,6 +20,7 @@ const models = {
   User: initUser(sequelize),
   WcaProfile: initWcaProfile(sequelize),
   Ranking: defineRanking(sequelize),
+  Competition: defineCompetition(sequelize),
 };
 
 Object.values(models).forEach((model) => {

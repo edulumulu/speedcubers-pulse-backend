@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2 y 3 completadas. Fase 4 (Videoconferencia Agora.io) en progreso: token RTC backend implementado.
+**Estado actual**: Fases 0, 1, 2 y 3 completadas. Fase 4C (salas de competición con Agora.io) en progreso: salas persistidas con código y token RTC backend implementados.
 
 ## Arquitectura
 
@@ -119,7 +119,7 @@ login_lock:{email}             → Bloqueo de cuenta activo (TTL: 15 min)
 pwd_reset:{token}              → Token de reset de contraseña → userId (TTL: 15 min)
 ```
 
-Migraciones versionadas: `001-create-users.js`, `002-...`
+Migraciones versionadas: `001-create-users.js`, `002-create-rankings.js`, `003-create-wca-profiles.js`, `004-create-competitions.js`.
 
 ## Variables de entorno
 
@@ -162,7 +162,7 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 
 - **`AppError`** (`src/domain/errors/AppError.js`): error tipado con `message`, `code` y `status`. Todos los servicios lo usan para errores de negocio.
 - **`handleError(err, res)`** (`src/presentation/utils/handleError.js`): helper en controllers para devolver 4xx desde AppError o 500 genérico para errores inesperados.
-- **`container.js`** (`src/infrastructure/container.js`): punto único de wiring DI — exporta `userRepository`, `wcaProfileRepository`, `wcaService`, `authService`, `authController`. Las rutas importan desde aquí.
+- **`container.js`** (`src/infrastructure/container.js`): punto único de wiring DI — exporta repositorios, services y controllers de auth, user, WCA, ranking, video y competition. Las rutas importan desde aquí.
 - **`WCA_ID_REGEX`** (`src/infrastructure/config/constants.js`): `/^[0-9]{4}[A-Z]{2,}[0-9]{2}$/` — usado por el validador Joi y el cliente WCA.
 - **`passwordField()`**: factory Joi en `auth.validator.js` — reutiliza las reglas de contraseña (min 8, mayúscula, dígito) en register, reset-password y change-password.
 - **Seguridad**: Helmet (HTTP headers), express-rate-limit (100 req/min por IP), login lockout (10 fallos → 15 min de bloqueo en Redis), `console.log` de tokens gateado por `NODE_ENV !== 'production'`.
@@ -197,7 +197,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 1 | Autenticación (JWT + WCA opcional) | ✅ |
 | 2 | Perfiles de usuario | ✅ |
 | 3 | Rankings + Redis cache | ✅ |
-| 4 | Videoconferencia (Agora.io): endpoint `POST /api/v1/video/token` | ⏳ |
+| 4C | Salas de competición con Agora.io: `POST /api/v1/competitions`, `POST /api/v1/competitions/join`, `GET /api/v1/competitions/:code`, token RTC | ⏳ |
 | 5 | Sistema de timing | — |
 | 6 | Presencia online (Socket.io) | — |
 | 7 | Integración, e2e, polish | — |

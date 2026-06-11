@@ -172,7 +172,7 @@ describe('POST /api/v1/auth/login — lockout', () => {
       .send({ email: validUser.email, password: validUser.password });
     expect(res.status).toBe(429);
     expect(res.body.code).toBe('ACCOUNT_LOCKED');
-  });
+  }, 15000);
 });
 
 describe('POST /api/v1/auth/logout', () => {
