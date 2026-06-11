@@ -272,14 +272,14 @@ describe('POST /api/v1/video/token', () => {
     const res = await request(app)
       .post('/api/v1/video/token')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ channelName: 'match-test', uid: 123 });
+      .send({ channelName: 'match-test' });
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       appId: process.env.AGORA_APP_ID,
       channelName: 'match-test',
-      uid: 123,
     });
+    expect(res.body.uid).toEqual(expect.any(Number));
     expect(res.body.token).toEqual(expect.stringMatching(/^007/));
     expect(res.body.expiresAt).toBeDefined();
   });

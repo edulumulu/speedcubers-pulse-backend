@@ -34,7 +34,7 @@ describe('VideoController.createToken', () => {
     }, response);
 
     expect(videoService.createRtcToken)
-      .toHaveBeenCalledWith({ userId: 'auth-user-id', channelName: 'match_1', uid: 42 });
+      .toHaveBeenCalledWith({ userId: 'auth-user-id', channelName: 'match_1' });
     expect(response.status).toHaveBeenCalledWith(200);
     expect(response.json).toHaveBeenCalledWith(token);
   });
