@@ -84,17 +84,25 @@ describe('403 — users cannot access resources belonging to others', () => {
     }
   });
 
-  it('PATCH /api/v1/users/me — userId comes from JWT, not from body', async () => {
+  it('PATCH /api/v1/users/me — injected userId in body is rejected by validation', async () => {
     const { tokens: aliceTokens, user: alice } = await registerUser('alice');
     const { user: bob } = await registerUser('bob');
 
-    // Bob tries to patch Alice's profile by injecting her userId in the body
-    const res = await request(app)
+    // Alice tries to patch Bob's profile by injecting his userId in the body:
+    // the Joi validator rejects unknown keys, blocking mass-assignment
+    const injected = await request(app)
       .patch('/api/v1/users/me')
       .set('Authorization', `Bearer ${aliceTokens.accessToken}`)
       .send({ userId: bob.id, username: 'hacked' });
 
-    // Must update Alice's own record, not Bob's
+    expect(injected.status).toBe(400);
+
+    // Without the injected key, the update applies to the JWT's user only
+    const res = await request(app)
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${aliceTokens.accessToken}`)
+      .send({ username: 'hacked' });
+
     expect(res.status).toBe(200);
     expect(res.body.user.id).toBe(alice.id);
     expect(res.body.user.username).toBe('hacked');
@@ -121,7 +129,8 @@ describe('403 — users cannot access resources belonging to others', () => {
       .set('Authorization', `Bearer ${outsiderTokens.accessToken}`)
       .send({ timeMs: 10000, penalty: 'none' });
 
-    expect(res.status).toBe(403);
+    // 404 on purpose: the API does not reveal the room exists (anti-enumeration)
+    expect(res.status).toBe(404);
   });
 
   it('GET /api/v1/competitions/:code — outsider cannot read a private room', async () => {
@@ -138,10 +147,7 @@ describe('403 — users cannot access resources belonging to others', () => {
       .get(`/api/v1/competitions/${code}`)
       .set('Authorization', `Bearer ${outsiderTokens.accessToken}`);
 
-    expect([200, 403]).toContain(res.status);
-    // If 200 is returned, it must not expose channelName to outsiders
-    if (res.status === 200) {
-      expect(res.body.competition).not.toHaveProperty('channelName');
-    }
+    // 404 on purpose: the API does not reveal the room exists (anti-enumeration)
+    expect(res.status).toBe(404);
   });
 });
