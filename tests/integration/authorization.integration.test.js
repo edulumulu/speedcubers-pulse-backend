@@ -6,10 +6,12 @@ import { cacheService } from '../../src/infrastructure/cache/CacheService.js';
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
+  await cacheService.connect();
 });
 
 afterAll(async () => {
   await sequelize.close();
+  await cacheService.disconnect();
   await redis.quit();
 });
 
