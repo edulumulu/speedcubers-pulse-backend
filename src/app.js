@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import 'dotenv/config';
 import routes from './presentation/routes/index.js';
 import { RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX } from './infrastructure/config/constants.js';
+import { requestLogger } from './presentation/middleware/requestLogger.middleware.js';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/', limiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '0.1.0' });
