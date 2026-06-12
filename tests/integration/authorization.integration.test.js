@@ -2,6 +2,7 @@ import request from 'supertest';
 import app from '../../src/app.js';
 import { sequelize } from '../../src/infrastructure/database/models/index.js';
 import redis from '../../src/infrastructure/config/redis.js';
+import { cacheService } from '../../src/infrastructure/cache/CacheService.js';
 
 beforeAll(async () => {
   await sequelize.sync({ force: true });
@@ -16,7 +17,7 @@ beforeEach(async () => {
   await sequelize.query(
     'TRUNCATE TABLE results, competition_rounds, competitions, rankings, wca_profiles, users RESTART IDENTITY CASCADE',
   );
-  await redis.flushDb();
+  await cacheService.client.flushDb();
 });
 
 async function registerUser(username) {
