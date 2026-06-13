@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { AppError } from '../../domain/errors/AppError.js';
+import { resolveRoundResults } from './RoundResolutionService.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_LENGTH = 6;
@@ -13,7 +14,25 @@ function generateCode() {
   return code;
 }
 
-function serializeCompetition(row) {
+function serializeRound(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    number: row.round_number,
+    scramble: row.scramble,
+    status: row.status,
+  };
+}
+
+function serializeCompletedRound(row, results) {
+  if (!row) return null;
+  return {
+    ...serializeRound(row),
+    resolution: resolveRoundResults(results),
+  };
+}
+
+function serializeCompetition(row, roundState = {}) {
   return {
     id: row.id,
     code: row.code,
@@ -22,14 +41,18 @@ function serializeCompetition(row) {
     status: row.status,
     host: row.host ? { id: row.host.id, username: row.host.username } : null,
     guest: row.guest ? { id: row.guest.id, username: row.guest.username } : null,
+    activeRound: roundState.activeRound ?? null,
+    latestCompletedRound: roundState.latestCompletedRound ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
 export class CompetitionService {
-  constructor(competitionRepository) {
+  constructor(competitionRepository, competitionRoundRepository = null, resultRepository = null) {
     this.competitionRepository = competitionRepository;
+    this.competitionRoundRepository = competitionRoundRepository;
+    this.resultRepository = resultRepository;
   }
 
   async createRoom({ userId, event = '3x3' }) {
@@ -60,7 +83,7 @@ export class CompetitionService {
     }
 
     if (row.host_user_id === userId) {
-      return serializeCompetition(row);
+      return serializeCompetition(row, await this.#roundState(row.id));
     }
 
     if (row.guest_user_id && row.guest_user_id !== userId) {
@@ -72,7 +95,7 @@ export class CompetitionService {
     }
 
     if (row.guest_user_id === userId) {
-      return serializeCompetition(row);
+      return serializeCompetition(row, await this.#roundState(row.id));
     }
 
     const updated = await this.competitionRepository.setGuestAndActivate(row.id, userId);
@@ -84,7 +107,7 @@ export class CompetitionService {
       throw new AppError('Competition room is not joinable', 'COMPETITION_NOT_JOINABLE', 409);
     }
 
-    return serializeCompetition(updated);
+    return serializeCompetition(updated, await this.#roundState(updated.id));
   }
 
   async getRoom({ userId, code }) {
@@ -97,6 +120,24 @@ export class CompetitionService {
       throw new AppError('Competition room not found', 'COMPETITION_NOT_FOUND', 404);
     }
 
-    return serializeCompetition(row);
+    return serializeCompetition(row, await this.#roundState(row.id));
+  }
+
+  async #roundState(competitionId) {
+    if (!this.competitionRoundRepository || !this.resultRepository) return {};
+
+    const [activeRoundRow, latestCompletedRoundRow] = await Promise.all([
+      this.competitionRoundRepository.findActiveByCompetition(competitionId),
+      this.competitionRoundRepository.findLatestCompletedByCompetition(competitionId),
+    ]);
+
+    const completedResults = latestCompletedRoundRow
+      ? await this.resultRepository.findByRound(latestCompletedRoundRow.id)
+      : [];
+
+    return {
+      activeRound: serializeRound(activeRoundRow),
+      latestCompletedRound: serializeCompletedRound(latestCompletedRoundRow, completedResults),
+    };
   }
 }

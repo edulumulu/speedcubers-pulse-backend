@@ -17,6 +17,13 @@ export class CompetitionRoundRepository {
     });
   }
 
+  async findLatestCompletedByCompetition(competitionId) {
+    return this.CompetitionRound.findOne({
+      where: { competition_id: competitionId, status: 'completed' },
+      order: [['round_number', 'DESC']],
+    });
+  }
+
   async createNext(competitionId) {
     const latest = await this.findLatestByCompetition(competitionId);
     const roundNumber = latest ? latest.round_number + 1 : 1;

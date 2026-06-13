@@ -43,6 +43,7 @@ function makeRepositories() {
     resultRepository: {
       findByRoundAndUser: jest.fn(),
       countByRound: jest.fn(),
+      findByRound: jest.fn(),
       create: jest.fn(),
     },
     competitionRepository: {
@@ -52,6 +53,9 @@ function makeRepositories() {
       findActiveByCompetition: jest.fn(),
       createNext: jest.fn(),
       complete: jest.fn(),
+    },
+    rankingService: {
+      processMatchResult: jest.fn(),
     },
   };
 }
@@ -161,17 +165,79 @@ describe('ResultService', () => {
   });
 
   it('completes the round and opens the next one after two submitted results', async () => {
-    const { resultRepository, competitionRepository, competitionRoundRepository } = makeRepositories();
+    const { resultRepository, competitionRepository, competitionRoundRepository, rankingService } = makeRepositories();
     competitionRepository.findByCode.mockResolvedValue(makeCompetition());
     competitionRoundRepository.findActiveByCompetition.mockResolvedValue(makeRound());
     resultRepository.findByRoundAndUser.mockResolvedValue(null);
     resultRepository.create.mockResolvedValue(makeResult({ user_id: 'guest-id' }));
     resultRepository.countByRound.mockResolvedValue(2);
+    resultRepository.findByRound.mockResolvedValue([
+      makeResult({ id: 'host-result', user_id: 'host-id', final_time_ms: 15000, user: { id: 'host-id', username: 'host' } }),
+      makeResult({ id: 'guest-result', user_id: 'guest-id', final_time_ms: 16000, user: { id: 'guest-id', username: 'guest' } }),
+    ]);
+    competitionRoundRepository.createNext.mockResolvedValue(makeRound({ id: 'round-2', round_number: 2 }));
+    rankingService.processMatchResult.mockResolvedValue({ newEloWinner: 1016, newEloLoser: 984 });
 
-    const service = new ResultService(resultRepository, competitionRepository, competitionRoundRepository);
-    await service.submitResult({ userId: 'guest-id', code: 'ABC234', timeMs: 16000 });
+    const service = new ResultService(resultRepository, competitionRepository, competitionRoundRepository, rankingService);
+    const result = await service.submitResult({ userId: 'guest-id', code: 'ABC234', timeMs: 16000 });
 
     expect(competitionRoundRepository.complete).toHaveBeenCalledWith('round-id');
     expect(competitionRoundRepository.createNext).toHaveBeenCalledWith('competition-id');
+    expect(rankingService.processMatchResult).toHaveBeenCalledWith({
+      winnerId: 'host-id',
+      loserId: 'guest-id',
+      winnerTime: 15,
+      loserTime: 16,
+      loserIsDnf: false,
+    });
+    expect(result.roundResolution).toMatchObject({
+      status: 'completed',
+      winner: { id: 'host-id', username: 'host' },
+      loser: { id: 'guest-id', username: 'guest' },
+      elo: { winner: 1016, loser: 984 },
+    });
+    expect(result.nextRound).toMatchObject({ id: 'round-2', number: 2, status: 'active' });
+  });
+
+  it('does not update Elo when both participants DNF', async () => {
+    const { resultRepository, competitionRepository, competitionRoundRepository, rankingService } = makeRepositories();
+    competitionRepository.findByCode.mockResolvedValue(makeCompetition());
+    competitionRoundRepository.findActiveByCompetition.mockResolvedValue(makeRound());
+    resultRepository.findByRoundAndUser.mockResolvedValue(null);
+    resultRepository.create.mockResolvedValue(makeResult({
+      user_id: 'guest-id',
+      time_ms: null,
+      penalty: 'dnf',
+      final_time_ms: null,
+    }));
+    resultRepository.countByRound.mockResolvedValue(2);
+    resultRepository.findByRound.mockResolvedValue([
+      makeResult({
+        id: 'host-result',
+        user_id: 'host-id',
+        time_ms: null,
+        penalty: 'dnf',
+        final_time_ms: null,
+        user: { id: 'host-id', username: 'host' },
+      }),
+      makeResult({
+        id: 'guest-result',
+        user_id: 'guest-id',
+        time_ms: null,
+        penalty: 'dnf',
+        final_time_ms: null,
+        user: { id: 'guest-id', username: 'guest' },
+      }),
+    ]);
+    competitionRoundRepository.createNext.mockResolvedValue(makeRound({ id: 'round-2', round_number: 2 }));
+
+    const service = new ResultService(resultRepository, competitionRepository, competitionRoundRepository, rankingService);
+    const result = await service.submitResult({ userId: 'guest-id', code: 'ABC234', timeMs: null, penalty: 'dnf' });
+
+    expect(rankingService.processMatchResult).not.toHaveBeenCalled();
+    expect(result.roundResolution).toMatchObject({
+      status: 'draw',
+      reason: 'both_dnf',
+    });
   });
 });

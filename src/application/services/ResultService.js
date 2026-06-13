@@ -1,5 +1,6 @@
 import { UniqueConstraintError } from 'sequelize';
 import { AppError } from '../../domain/errors/AppError.js';
+import { finalTimeMsToSeconds, resolveRoundResults } from './RoundResolutionService.js';
 
 function serializeResult(row) {
   return {
@@ -21,10 +22,11 @@ function calculateFinalTimeMs(timeMs, penalty) {
 }
 
 export class ResultService {
-  constructor(resultRepository, competitionRepository, competitionRoundRepository) {
+  constructor(resultRepository, competitionRepository, competitionRoundRepository, rankingService = null) {
     this.resultRepository = resultRepository;
     this.competitionRepository = competitionRepository;
     this.competitionRoundRepository = competitionRoundRepository;
+    this.rankingService = rankingService;
   }
 
   async submitResult({ userId, code, timeMs, penalty = 'none' }) {
@@ -57,7 +59,7 @@ export class ResultService {
         final_time_ms: calculateFinalTimeMs(timeMs, penalty),
       });
 
-      await this.#openNextRoundIfComplete(competition.id, round.id);
+      const completion = await this.#completeRoundIfReady(competition.id, round.id);
 
       return {
         ...serializeResult(row),
@@ -66,6 +68,8 @@ export class ResultService {
           number: round.round_number,
           scramble: round.scramble,
         },
+        roundResolution: completion?.roundResolution ?? null,
+        nextRound: completion?.nextRound ? serializeRound(completion.nextRound) : null,
       };
     } catch (err) {
       if (err instanceof UniqueConstraintError) {
@@ -81,11 +85,38 @@ export class ResultService {
     return this.competitionRoundRepository.createNext(competitionId);
   }
 
-  async #openNextRoundIfComplete(competitionId, roundId) {
+  async #completeRoundIfReady(competitionId, roundId) {
     const resultCount = await this.resultRepository.countByRound(roundId);
-    if (resultCount < 2) return;
+    if (resultCount < 2) return null;
 
     await this.competitionRoundRepository.complete(roundId);
-    await this.competitionRoundRepository.createNext(competitionId);
+    const roundResults = await this.resultRepository.findByRound(roundId);
+    const roundResolution = resolveRoundResults(roundResults);
+
+    if (roundResolution.status === 'completed' && this.rankingService) {
+      const elo = await this.rankingService.processMatchResult({
+        winnerId: roundResolution.winner.id,
+        loserId: roundResolution.loser.id,
+        winnerTime: finalTimeMsToSeconds(roundResolution.winningTimeMs),
+        loserTime: finalTimeMsToSeconds(roundResolution.losingTimeMs),
+        loserIsDnf: roundResolution.loserIsDnf,
+      });
+      roundResolution.elo = {
+        winner: elo.newEloWinner,
+        loser: elo.newEloLoser,
+      };
+    }
+
+    const nextRound = await this.competitionRoundRepository.createNext(competitionId);
+    return { roundResolution, nextRound };
   }
+}
+
+function serializeRound(round) {
+  return {
+    id: round.id,
+    number: round.round_number,
+    scramble: round.scramble,
+    status: round.status,
+  };
 }

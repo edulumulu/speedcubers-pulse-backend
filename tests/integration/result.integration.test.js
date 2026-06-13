@@ -121,7 +121,46 @@ describe('Competition results', () => {
     expect(hostRoundTwo.status).toBe(201);
     expect(hostRoundOne.body.result.round.number).toBe(1);
     expect(guestRoundOne.body.result.round.number).toBe(1);
+    expect(guestRoundOne.body.result.roundResolution).toMatchObject({
+      status: 'completed',
+      winner: { username: 'host' },
+      loser: { username: 'guest' },
+      elo: { winner: 1016, loser: 984 },
+    });
+    expect(guestRoundOne.body.result.nextRound).toMatchObject({ number: 2, status: 'active' });
     expect(hostRoundTwo.body.result.round.number).toBe(2);
+
+    const rankingRes = await request(app).get('/api/v1/ranking');
+    expect(rankingRes.status).toBe(200);
+    expect(rankingRes.body.ranking).toEqual(expect.arrayContaining([
+      expect.objectContaining({ username: 'host', elo: 1016, wins: 1, losses: 0, total_matches: 1 }),
+      expect.objectContaining({ username: 'guest', elo: 984, wins: 0, losses: 1, total_matches: 1 }),
+    ]));
+  });
+
+  it('keeps Elo unchanged when both participants DNF', async () => {
+    const { host, guest, code } = await createActiveCompetition();
+
+    await request(app)
+      .post(`/api/v1/competitions/${code}/results`)
+      .set('Authorization', `Bearer ${host.tokens.accessToken}`)
+      .send({ penalty: 'dnf' });
+    const guestRoundOne = await request(app)
+      .post(`/api/v1/competitions/${code}/results`)
+      .set('Authorization', `Bearer ${guest.tokens.accessToken}`)
+      .send({ penalty: 'dnf' });
+
+    expect(guestRoundOne.status).toBe(201);
+    expect(guestRoundOne.body.result.roundResolution).toMatchObject({
+      status: 'draw',
+      reason: 'both_dnf',
+    });
+
+    const rankingRes = await request(app).get('/api/v1/ranking');
+    expect(rankingRes.body.ranking).toEqual(expect.arrayContaining([
+      expect.objectContaining({ username: 'host', elo: 1000, wins: 0, losses: 0, total_matches: 0 }),
+      expect.objectContaining({ username: 'guest', elo: 1000, wins: 0, losses: 0, total_matches: 0 }),
+    ]));
   });
 
   it('rejects submissions from non participants', async () => {

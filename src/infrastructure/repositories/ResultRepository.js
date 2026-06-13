@@ -19,6 +19,14 @@ export class ResultRepository {
     return this.Result.count({ where: { round_id: roundId } });
   }
 
+  async findByRound(roundId) {
+    return this.Result.findAll({
+      where: { round_id: roundId },
+      include: this.includeUser(),
+      order: [['created_at', 'ASC']],
+    });
+  }
+
   async create(data) {
     const row = await this.Result.create(data);
     return this.Result.findByPk(row.id, { include: this.includeUser() });

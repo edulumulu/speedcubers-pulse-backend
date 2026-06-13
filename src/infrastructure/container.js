@@ -29,8 +29,8 @@ const wcaService = new WcaService(wcaProfileRepository);
 const authService = new AuthService(userRepository, rankingRepository);
 const rankingService = new RankingService(rankingRepository, cacheService);
 const videoService = new VideoService();
-const competitionService = new CompetitionService(competitionRepository);
-const resultService = new ResultService(resultRepository, competitionRepository, competitionRoundRepository);
+const competitionService = new CompetitionService(competitionRepository, competitionRoundRepository, resultRepository);
+const resultService = new ResultService(resultRepository, competitionRepository, competitionRoundRepository, rankingService);
 
 const authController = new AuthController(authService, wcaService);
 const rankingController = new RankingController(rankingService);
