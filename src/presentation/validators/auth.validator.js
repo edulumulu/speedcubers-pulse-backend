@@ -30,7 +30,7 @@ export const loginSchema = Joi.object({
 });
 
 export const refreshSchema = Joi.object({
-  refresh_token: Joi.string().required(),
+  refresh_token: Joi.string().optional(),
 });
 
 export const linkWcaSchema = Joi.object({

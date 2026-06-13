@@ -16,6 +16,7 @@ const { AuthService } = await import('../../../src/application/services/AuthServ
 const { default: redis } = await import('../../../src/infrastructure/config/redis.js');
 
 const mockUserRepository = {
+  findById: jest.fn(),
   findByEmail: jest.fn(),
   findByUsername: jest.fn(),
   create: jest.fn(),
@@ -188,20 +189,25 @@ describe('AuthService.login', () => {
 });
 
 describe('AuthService.refreshTokens', () => {
-  it('returns new tokens for a valid refresh token', async () => {
+  it('returns user and new tokens for a valid refresh token', async () => {
     const svc = makeService();
     const jwt = await import('jsonwebtoken');
     const refreshToken = jwt.default.sign({ sub: 'uuid-1' }, 'test-refresh-secret', { expiresIn: '7d' });
+    mockUserRepository.findById.mockResolvedValue({
+      id: 'uuid-1',
+      toPrivate: () => ({ id: 'uuid-1', email: 'a@b.com', username: 'alice' }),
+    });
 
-    const tokens = svc.refreshTokens(refreshToken);
-    expect(tokens.accessToken).toBeDefined();
-    expect(tokens.refreshToken).toBeDefined();
+    const result = await svc.refreshTokens(refreshToken);
+    expect(result.user.username).toBe('alice');
+    expect(result.tokens.accessToken).toBeDefined();
+    expect(result.tokens.refreshToken).toBeDefined();
   });
 
-  it('throws INVALID_TOKEN for an expired or tampered refresh token', () => {
+  it('throws INVALID_TOKEN for an expired or tampered refresh token', async () => {
     const svc = makeService();
-    expect(() => svc.refreshTokens('bad.token.here'))
-      .toThrow(expect.objectContaining({ code: 'INVALID_TOKEN', status: 401 }));
+    await expect(svc.refreshTokens('bad.token.here'))
+      .rejects.toMatchObject({ code: 'INVALID_TOKEN', status: 401 });
   });
 });
 
