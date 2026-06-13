@@ -70,6 +70,8 @@ describe('POST /api/v1/auth/register', () => {
     expect(res.body.tokens.refreshToken).toBeDefined();
     expect(res.body.user.email).toBe(validUser.email);
     expect(res.body.user.passwordHash).toBeUndefined();
+    expect(res.headers['set-cookie']?.join(';')).toContain('refresh_token=');
+    expect(res.headers['set-cookie']?.join(';')).toContain('HttpOnly');
   });
 
   it('returns 409 when email is already taken', async () => {
@@ -116,6 +118,7 @@ describe('POST /api/v1/auth/login', () => {
       .send({ email: validUser.email, password: validUser.password });
     expect(res.status).toBe(200);
     expect(res.body.tokens.accessToken).toBeDefined();
+    expect(res.headers['set-cookie']?.join(';')).toContain('refresh_token=');
   });
 
   it('returns 401 for wrong password', async () => {
@@ -144,6 +147,20 @@ describe('POST /api/v1/auth/refresh', () => {
       .send({ refresh_token: refreshToken });
     expect(res.status).toBe(200);
     expect(res.body.tokens.accessToken).toBeDefined();
+    expect(res.body.user.username).toBe(validUser.username);
+  });
+
+  it('returns new tokens using the refresh cookie', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/v1/auth/register').send(validUser);
+
+    const res = await agent
+      .post('/api/v1/auth/refresh')
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.tokens.accessToken).toBeDefined();
+    expect(res.body.user.email).toBe(validUser.email);
   });
 
   it('returns 401 for an invalid refresh token', async () => {
@@ -184,6 +201,7 @@ describe('POST /api/v1/auth/logout', () => {
       .post('/api/v1/auth/logout')
       .set('Authorization', `Bearer ${accessToken}`);
     expect(res.status).toBe(204);
+    expect(res.headers['set-cookie']?.join(';')).toContain('refresh_token=;');
   });
 
   it('returns 401 without token', async () => {

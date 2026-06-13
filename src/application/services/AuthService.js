@@ -83,10 +83,18 @@ export class AuthService {
     };
   }
 
-  refreshTokens(refreshToken) {
+  async refreshTokens(refreshToken) {
     try {
       const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-      return this.#generateTokens(payload.sub);
+      const user = await this.userRepository.findById(payload.sub);
+      if (!user) {
+        throw new AppError('Invalid refresh token', 'INVALID_TOKEN', 401);
+      }
+
+      return {
+        user: user.toPrivate(),
+        tokens: this.#generateTokens(payload.sub),
+      };
     } catch {
       throw new AppError('Invalid refresh token', 'INVALID_TOKEN', 401);
     }

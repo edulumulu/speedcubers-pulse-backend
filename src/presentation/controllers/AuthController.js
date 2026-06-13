@@ -1,5 +1,41 @@
 import { handleError } from '../utils/handleError.js';
 
+const REFRESH_COOKIE_NAME = 'refresh_token';
+const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function refreshCookieOptions() {
+  const isProduction = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: REFRESH_COOKIE_MAX_AGE_MS,
+    path: '/api/v1/auth',
+  };
+}
+
+function readCookie(req, name) {
+  const rawCookie = req.headers.cookie;
+  if (!rawCookie) return null;
+
+  const cookies = rawCookie.split(';').map((part) => part.trim());
+  const cookie = cookies.find((part) => part.startsWith(`${name}=`));
+  if (!cookie) return null;
+
+  return decodeURIComponent(cookie.slice(name.length + 1));
+}
+
+function setRefreshCookie(res, refreshToken) {
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions());
+}
+
+function clearRefreshCookie(res) {
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    ...refreshCookieOptions(),
+    maxAge: undefined,
+  });
+}
+
 export class AuthController {
   constructor(authService, wcaService) {
     this.authService = authService;
@@ -19,6 +55,7 @@ export class AuthController {
         }
       }
 
+      setRefreshCookie(res, result.tokens.refreshToken);
       return res.status(201).json(result);
     } catch (err) {
       handleError(err, res);
@@ -29,6 +66,7 @@ export class AuthController {
     try {
       const { email, password } = req.body;
       const result = await this.authService.login({ email, password });
+      setRefreshCookie(res, result.tokens.refreshToken);
       return res.status(200).json(result);
     } catch (err) {
       handleError(err, res);
@@ -37,17 +75,17 @@ export class AuthController {
 
   refresh = async (req, res) => {
     try {
-      const { refresh_token } = req.body;
-      const tokens = await this.authService.refreshTokens(refresh_token);
-      return res.status(200).json({ tokens });
+      const refreshToken = req.body.refresh_token ?? readCookie(req, REFRESH_COOKIE_NAME);
+      const result = await this.authService.refreshTokens(refreshToken);
+      setRefreshCookie(res, result.tokens.refreshToken);
+      return res.status(200).json(result);
     } catch (err) {
       handleError(err, res);
     }
   };
 
   logout = async (_req, res) => {
-    // Stateless JWT — client drops the token.
-    // If a token blacklist is needed in future, add it here.
+    clearRefreshCookie(res);
     return res.status(204).send();
   };
 

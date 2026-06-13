@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B y 6 completadas. Fase 6 implementa presencia online MVP con Socket.io autenticado, Redis y endpoint público de usuarios online.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B y 6 completadas. Fase 7A en curso: estabilidad de sesión al recargar mediante refresh token en cookie `httpOnly`.
 
 ## Arquitectura
 
@@ -80,7 +80,7 @@ Targets:
 
 - Prepared statements siempre — nunca interpolar valores en queries SQL
 - bcrypt salt rounds ≥ 12
-- JWT: access token 24h, refresh token 7 días
+- JWT: access token 24h, refresh token 7 días en cookie `httpOnly`
 - Rate limiting: 10 logins fallidos → lockout 15 min; 100 req/min por IP
 - Validar y sanitizar WCA ID antes de llamar a la API externa
 - No exponer stack traces ni detalles internos en respuestas de error
@@ -167,6 +167,7 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 - **`WCA_ID_REGEX`** (`src/infrastructure/config/constants.js`): `/^[0-9]{4}[A-Z]{2,}[0-9]{2}$/` — usado por el validador Joi y el cliente WCA.
 - **`passwordField()`**: factory Joi en `auth.validator.js` — reutiliza las reglas de contraseña (min 8, mayúscula, dígito) en register, reset-password y change-password.
 - **Seguridad**: Helmet (HTTP headers), express-rate-limit (100 req/min por IP), login lockout (10 fallos → 15 min de bloqueo en Redis), `console.log` de tokens gateado por `NODE_ENV !== 'production'`.
+- **Sesión persistente**: `POST /auth/register` y `POST /auth/login` emiten `refresh_token` como cookie `httpOnly`; `POST /auth/refresh` acepta cookie o body legacy y devuelve `{ user, tokens }`; `POST /auth/logout` limpia la cookie.
 - **WCA ID inmutable**: una vez vinculado un WCA ID, `WcaService.validateAndLink` lanza `WCA_ALREADY_LINKED` (409). No se puede cambiar ni desvincular (excepto mediante admin).
 - **Presencia online**: `PresenceService` guarda usuarios conectados en Redis `online:users`; `presence.socket.js` autentica Socket.io con JWT y emite `presence:online`, `presence:offline` y `presence:heartbeat`.
 
@@ -204,6 +205,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 5A | Submit básico de resultados por ronda: `competition_rounds`, `results`, `POST /api/v1/competitions/:code/results` | ✅ |
 | 5B | Resolución de ronda, ganador/empate, Elo/ranking/stat updates | ✅ |
 | 6 | Presencia online MVP: Socket.io autenticado, Redis `online:users`, `GET /api/v1/users/online` | ✅ |
+| 7A | Estabilidad de sesión: refresh cookie `httpOnly`, recuperación al recargar | ⏳ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
