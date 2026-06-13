@@ -7,6 +7,7 @@ import { WcaProfileRepository } from '../../infrastructure/repositories/WcaProfi
 import { models } from '../../infrastructure/database/models/index.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { validate, updateMeSchema } from '../validators/user.validator.js';
+import { presenceController } from '../../infrastructure/container.js';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ const controller = new UserController(userService);
 router.get('/me', requireAuth, controller.getMe);
 router.patch('/me', requireAuth, validate(updateMeSchema), controller.updateMe);
 router.delete('/me', requireAuth, controller.deleteMe);
+router.get('/online', presenceController.getOnlineUsers);
 router.get('/:username', controller.getByUsername);
 
 export default router;
