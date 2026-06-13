@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A y 5B completadas. Fase 5B resuelve cada ronda cuando ambos usuarios envían resultado, actualiza Elo/ranking si hay ganador y abre la siguiente ronda activa.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B y 6 completadas. Fase 6 implementa presencia online MVP con Socket.io autenticado, Redis y endpoint público de usuarios online.
 
 ## Arquitectura
 
@@ -113,7 +113,7 @@ Redis keys:
 ranking:top:100:{event}        → Array top 100 por evento (TTL 5 min)
 user:{id}:stats                → Stats y Elo de usuario (TTL 5 min)
 wca:ranking:{user_id}:{event}  → Ranking WCA oficial del usuario en ese evento (TTL 24h)
-online:users                   → Set de usuarios online
+online:users                   → Hash de usuarios online `{ id, username, connectedAt, lastSeenAt }`
 competition:{id}               → Estado de competencia activa
 login_fail:{email}             → Contador de intentos fallidos de login (TTL: 15 min)
 login_lock:{email}             → Bloqueo de cuenta activo (TTL: 15 min)
@@ -168,6 +168,7 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 - **`passwordField()`**: factory Joi en `auth.validator.js` — reutiliza las reglas de contraseña (min 8, mayúscula, dígito) en register, reset-password y change-password.
 - **Seguridad**: Helmet (HTTP headers), express-rate-limit (100 req/min por IP), login lockout (10 fallos → 15 min de bloqueo en Redis), `console.log` de tokens gateado por `NODE_ENV !== 'production'`.
 - **WCA ID inmutable**: una vez vinculado un WCA ID, `WcaService.validateAndLink` lanza `WCA_ALREADY_LINKED` (409). No se puede cambiar ni desvincular (excepto mediante admin).
+- **Presencia online**: `PresenceService` guarda usuarios conectados en Redis `online:users`; `presence.socket.js` autentica Socket.io con JWT y emite `presence:online`, `presence:offline` y `presence:heartbeat`.
 
 ## Migraciones y seeds
 
@@ -202,7 +203,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 4C | Salas de competición con Agora.io: `POST /api/v1/competitions`, `POST /api/v1/competitions/join`, `GET /api/v1/competitions/:code`, token RTC | ✅ |
 | 5A | Submit básico de resultados por ronda: `competition_rounds`, `results`, `POST /api/v1/competitions/:code/results` | ✅ |
 | 5B | Resolución de ronda, ganador/empate, Elo/ranking/stat updates | ✅ |
-| 6 | Presencia online (Socket.io) | — |
+| 6 | Presencia online MVP: Socket.io autenticado, Redis `online:users`, `GET /api/v1/users/online` | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
