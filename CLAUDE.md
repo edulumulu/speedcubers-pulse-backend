@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3 y 4C completadas. Fase 5A implementada: timer local en frontend y submit básico de resultados por ronda.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A y 5B completadas. Fase 5B resuelve cada ronda cuando ambos usuarios envían resultado, actualiza Elo/ranking si hay ganador y abre la siguiente ronda activa.
 
 ## Arquitectura
 
@@ -20,7 +20,7 @@ infrastructure/ → domain/
 
 Dependency injection manual: `new UserService(userRepository, wcaService)`. Sin frameworks de DI.
 
-**Decisión crítica**: el timer de competencia corre 100% en el cliente. El servidor valida rango (0–600s), persiste resultados por ronda y calcula `final_time_ms`; no confiar en timestamps del cliente para seguridad.
+**Decisión crítica**: el timer de competencia corre 100% en el cliente. El servidor valida rango (0–600s), persiste resultados por ronda, calcula `final_time_ms`, resuelve ganador/empate cuando ambos usuarios envían y actualiza ranking/Elo si procede; no confiar en timestamps del cliente para seguridad.
 
 ## Stack
 
@@ -187,7 +187,8 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 ```
 
 - DNF = pérdida (W=0) para el que falla; el oponente gana (W=1). Sin penalización adicional.
-- Elo se actualiza tras **cada match individual**.
+- Ambos DNF o tiempos finales iguales = empate sin actualización de Elo.
+- Elo se actualiza tras **cada ronda completada con ganador**, no al final de la videollamada.
 - Ranking WCA oficial por evento: se obtiene de la WCA API y se cachea en `wca:ranking:{user_id}:{event}` con TTL 24h. **No se persiste en PostgreSQL**.
 
 ## Fases del MVP
@@ -200,7 +201,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 3 | Rankings + Redis cache | ✅ |
 | 4C | Salas de competición con Agora.io: `POST /api/v1/competitions`, `POST /api/v1/competitions/join`, `GET /api/v1/competitions/:code`, token RTC | ✅ |
 | 5A | Submit básico de resultados por ronda: `competition_rounds`, `results`, `POST /api/v1/competitions/:code/results` | ✅ |
-| 5B | Cierre de match, ganador, Elo/ranking | — |
+| 5B | Resolución de ronda, ganador/empate, Elo/ranking/stat updates | ✅ |
 | 6 | Presencia online (Socket.io) | — |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
