@@ -17,6 +17,13 @@ describe('result validators', () => {
     expect(value.penalty).toBe('none');
   });
 
+  it('accepts a timed result with combined +4 penalty', () => {
+    const { error, value } = submitResultSchema.validate({ timeMs: 15000, penalty: '+4' });
+
+    expect(error).toBeUndefined();
+    expect(value.penalty).toBe('+4');
+  });
+
   it('accepts DNF without a time', () => {
     const { error } = submitResultSchema.validate({ penalty: 'dnf' });
 

@@ -28,7 +28,7 @@ export function defineResult(sequelize) {
         allowNull: true,
       },
       penalty: {
-        type: DataTypes.ENUM('none', '+2', 'dnf'),
+        type: DataTypes.ENUM('none', '+2', '+4', 'dnf'),
         allowNull: false,
         defaultValue: 'none',
       },

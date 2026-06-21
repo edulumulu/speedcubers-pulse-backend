@@ -13,7 +13,9 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await sequelize.query('TRUNCATE TABLE competitions, rankings, wca_profiles, users RESTART IDENTITY CASCADE');
+  await sequelize.query(
+    'TRUNCATE TABLE results, competition_rounds, competitions, rankings, wca_profiles, users RESTART IDENTITY CASCADE',
+  );
 });
 
 async function registerUser(username) {
@@ -65,7 +67,13 @@ describe('Competition rooms', () => {
       status: 'active',
       host: { username: 'host' },
       guest: { username: 'guest' },
+      activeRound: {
+        number: 1,
+        status: 'active',
+      },
     });
+    expect(res.body.competition.activeRound.scramble).toEqual(expect.any(String));
+    expect(res.body.competition.activeRound.scramble.split(' ')).toHaveLength(20);
   });
 
   it('rejects a third user when the room is full', async () => {

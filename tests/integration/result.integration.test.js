@@ -128,6 +128,8 @@ describe('Competition results', () => {
       elo: { winner: 1016, loser: 984 },
     });
     expect(guestRoundOne.body.result.nextRound).toMatchObject({ number: 2, status: 'active' });
+    expect(guestRoundOne.body.result.nextRound.scramble).toEqual(expect.any(String));
+    expect(guestRoundOne.body.result.nextRound.scramble.split(' ')).toHaveLength(20);
     expect(hostRoundTwo.body.result.round.number).toBe(2);
 
     const rankingRes = await request(app).get('/api/v1/ranking');

@@ -26,6 +26,20 @@ function makeRepository() {
   };
 }
 
+function makeRoundRepository() {
+  return {
+    createNext: jest.fn(),
+    findActiveByCompetition: jest.fn(),
+    findLatestCompletedByCompetition: jest.fn(),
+  };
+}
+
+function makeResultRepository() {
+  return {
+    findByRound: jest.fn(),
+  };
+}
+
 describe('CompetitionService', () => {
   it('creates a waiting competition room with a safe channel name', async () => {
     const repository = makeRepository();
@@ -50,19 +64,40 @@ describe('CompetitionService', () => {
 
   it('activates a waiting room when a guest joins', async () => {
     const repository = makeRepository();
+    const roundRepository = makeRoundRepository();
+    const resultRepository = makeResultRepository();
     repository.findByCode.mockResolvedValue(makeRow());
     repository.setGuestAndActivate.mockResolvedValue(makeRow({
       status: 'active',
       guest_user_id: 'guest-id',
       guest: { id: 'guest-id', username: 'guest' },
     }));
+    roundRepository.createNext.mockResolvedValue({
+      id: 'round-id',
+      round_number: 1,
+      scramble: 'R U R\' U\'',
+      status: 'active',
+    });
+    roundRepository.findActiveByCompetition.mockResolvedValue({
+      id: 'round-id',
+      round_number: 1,
+      scramble: 'R U R\' U\'',
+      status: 'active',
+    });
+    roundRepository.findLatestCompletedByCompetition.mockResolvedValue(null);
 
-    const service = new CompetitionService(repository);
+    const service = new CompetitionService(repository, roundRepository, resultRepository);
     const result = await service.joinRoom({ userId: 'guest-id', code: 'abc234' });
 
     expect(repository.setGuestAndActivate).toHaveBeenCalledWith('competition-id', 'guest-id');
+    expect(roundRepository.createNext).toHaveBeenCalledWith('competition-id');
     expect(result.status).toBe('active');
     expect(result.guest).toEqual({ id: 'guest-id', username: 'guest' });
+    expect(result.activeRound).toMatchObject({
+      number: 1,
+      scramble: 'R U R\' U\'',
+      status: 'active',
+    });
   });
 
   it('rejects joining a full room', async () => {
