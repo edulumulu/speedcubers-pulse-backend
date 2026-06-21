@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2 y 7B-3 completadas. Fase 7C-1 en curso: workflow manual Playwright pre-release validation y hardening de sesión.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1 y 7C-2A completadas. Fase 7C-2B pendiente en frontend/docs; sin cambios de contrato backend previstos todavía.
 
 ## Arquitectura
 
@@ -209,7 +209,9 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 7B-1 | Playwright auth/session E2E foundation | ✅ |
 | 7B-2 | Playwright ranking/profile E2E | ✅ |
 | 7B-3 | Playwright competition 1v1 E2E | ✅ |
-| 7C-1 | Manual Playwright pre-release validation + session hardening | ⏳ |
+| 7C-1 | Manual Playwright pre-release validation + session hardening | ✅ |
+| 7C-2A | Pulido visual/accesibilidad de `/compete` sin cambios backend | ✅ |
+| 7C-2B | Lógica de inspección y penalizaciones; contrato backend por definir si hace falta | ⏳ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
