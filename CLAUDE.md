@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B y 6 completadas. Fase 7A en curso: estabilidad de sesión al recargar mediante refresh token en cookie `httpOnly`.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6 y 7A completadas. Fase 7B-1 en curso en frontend: base E2E con Playwright para auth/session.
 
 ## Arquitectura
 
@@ -68,7 +68,7 @@ Tests de integración usan base de datos real — **no mockear PostgreSQL**.
 tests/
   unit/          # Jest puro, sin DB, sin red
   integration/   # supertest + PostgreSQL real, TRUNCATE en beforeEach
-  e2e/           # Puppeteer, flujo completo
+  e2e/           # Playwright desde frontend, flujos completos
 ```
 
 Targets:
@@ -205,7 +205,8 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 5A | Submit básico de resultados por ronda: `competition_rounds`, `results`, `POST /api/v1/competitions/:code/results` | ✅ |
 | 5B | Resolución de ronda, ganador/empate, Elo/ranking/stat updates | ✅ |
 | 6 | Presencia online MVP: Socket.io autenticado, Redis `online:users`, `GET /api/v1/users/online` | ✅ |
-| 7A | Estabilidad de sesión: refresh cookie `httpOnly`, recuperación al recargar | ⏳ |
+| 7A | Estabilidad de sesión: refresh cookie `httpOnly`, recuperación al recargar | ✅ |
+| 7B-1 | Playwright auth/session E2E foundation | ⏳ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
