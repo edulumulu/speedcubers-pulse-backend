@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1 y 7B-2 completadas. Fase 7B-3 en curso en frontend: E2E de competición 1v1 contra backend real.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2 y 7B-3 completadas. Fase 7C-1 en curso: workflow manual Playwright pre-release validation y hardening de sesión.
 
 ## Arquitectura
 
@@ -167,7 +167,7 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 - **`WCA_ID_REGEX`** (`src/infrastructure/config/constants.js`): `/^[0-9]{4}[A-Z]{2,}[0-9]{2}$/` — usado por el validador Joi y el cliente WCA.
 - **`passwordField()`**: factory Joi en `auth.validator.js` — reutiliza las reglas de contraseña (min 8, mayúscula, dígito) en register, reset-password y change-password.
 - **Seguridad**: Helmet (HTTP headers), express-rate-limit (100 req/min por IP), login lockout (10 fallos → 15 min de bloqueo en Redis), `console.log` de tokens gateado por `NODE_ENV !== 'production'`.
-- **Sesión persistente**: `POST /auth/register` y `POST /auth/login` emiten `refresh_token` como cookie `httpOnly`; `POST /auth/refresh` acepta cookie o body legacy y devuelve `{ user, tokens }`; `POST /auth/logout` limpia la cookie.
+- **Sesión persistente**: `POST /auth/register` y `POST /auth/login` emiten `refresh_token` solo como cookie `httpOnly`; la respuesta JSON devuelve `user` y `tokens.accessToken`, nunca `tokens.refreshToken`. `POST /auth/refresh` acepta cookie o body legacy, rota la cookie y devuelve un nuevo access token; `POST /auth/logout` limpia la cookie.
 - **WCA ID inmutable**: una vez vinculado un WCA ID, `WcaService.validateAndLink` lanza `WCA_ALREADY_LINKED` (409). No se puede cambiar ni desvincular (excepto mediante admin).
 - **Presencia online**: `PresenceService` guarda usuarios conectados en Redis `online:users`; `presence.socket.js` autentica Socket.io con JWT y emite `presence:online`, `presence:offline` y `presence:heartbeat`.
 
@@ -208,7 +208,8 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 7A | Estabilidad de sesión: refresh cookie `httpOnly`, recuperación al recargar | ✅ |
 | 7B-1 | Playwright auth/session E2E foundation | ✅ |
 | 7B-2 | Playwright ranking/profile E2E | ✅ |
-| 7B-3 | Playwright competition 1v1 E2E | ⏳ |
+| 7B-3 | Playwright competition 1v1 E2E | ✅ |
+| 7C-1 | Manual Playwright pre-release validation + session hardening | ⏳ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
