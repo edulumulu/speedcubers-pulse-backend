@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6 y 7A completadas. Fase 7B-1 en curso en frontend: base E2E con Playwright para auth/session.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A y 7B-1 completadas. Fase 7B-2 en curso en frontend: E2E público de ranking y perfil.
 
 ## Arquitectura
 
@@ -206,7 +206,8 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 5B | Resolución de ronda, ganador/empate, Elo/ranking/stat updates | ✅ |
 | 6 | Presencia online MVP: Socket.io autenticado, Redis `online:users`, `GET /api/v1/users/online` | ✅ |
 | 7A | Estabilidad de sesión: refresh cookie `httpOnly`, recuperación al recargar | ✅ |
-| 7B-1 | Playwright auth/session E2E foundation | ⏳ |
+| 7B-1 | Playwright auth/session E2E foundation | ✅ |
+| 7B-2 | Playwright ranking/profile E2E | ⏳ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
