@@ -1,6 +1,9 @@
+import { ScrambleGenerator } from '../../domain/entities/ScrambleGenerator.js';
+
 export class CompetitionRoundRepository {
-  constructor(models) {
+  constructor(models, scrambleGenerator = new ScrambleGenerator()) {
     this.CompetitionRound = models.CompetitionRound;
+    this.scrambleGenerator = scrambleGenerator;
   }
 
   async findActiveByCompetition(competitionId) {
@@ -30,6 +33,7 @@ export class CompetitionRoundRepository {
     return this.CompetitionRound.create({
       competition_id: competitionId,
       round_number: roundNumber,
+      scramble: this.scrambleGenerator.generate(),
       status: 'active',
     });
   }

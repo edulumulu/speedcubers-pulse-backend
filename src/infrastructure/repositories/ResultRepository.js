@@ -2,6 +2,7 @@ export class ResultRepository {
   constructor(models) {
     this.Result = models.Result;
     this.User = models.User;
+    this.CompetitionRound = models.CompetitionRound;
   }
 
   includeUser() {
@@ -24,6 +25,25 @@ export class ResultRepository {
       where: { round_id: roundId },
       include: this.includeUser(),
       order: [['created_at', 'ASC']],
+    });
+  }
+
+  async findCompletedByCompetition(competitionId) {
+    return this.Result.findAll({
+      include: [
+        ...this.includeUser(),
+        {
+          model: this.CompetitionRound,
+          as: 'round',
+          attributes: ['id', 'round_number', 'status'],
+          where: { competition_id: competitionId, status: 'completed' },
+          required: true,
+        },
+      ],
+      order: [
+        [{ model: this.CompetitionRound, as: 'round' }, 'round_number', 'ASC'],
+        ['created_at', 'ASC'],
+      ],
     });
   }
 

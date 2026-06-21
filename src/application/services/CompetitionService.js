@@ -32,6 +32,37 @@ function serializeCompletedRound(row, results) {
   };
 }
 
+function emptyMatchScore(row) {
+  return {
+    host: row.host ? { id: row.host.id, username: row.host.username, score: 0 } : null,
+    guest: row.guest ? { id: row.guest.id, username: row.guest.username, score: 0 } : null,
+    roundsPlayed: 0,
+  };
+}
+
+function serializeMatchScore(row, results) {
+  const score = emptyMatchScore(row);
+  const groupedResults = new Map();
+
+  results.forEach((result) => {
+    const roundId = result.round_id;
+    if (!groupedResults.has(roundId)) groupedResults.set(roundId, []);
+    groupedResults.get(roundId).push(result);
+  });
+
+  groupedResults.forEach((roundResults) => {
+    const resolution = resolveRoundResults(roundResults);
+    if (!['completed', 'draw'].includes(resolution.status)) return;
+
+    score.roundsPlayed += 1;
+    if (resolution.status !== 'completed') return;
+    if (resolution.winner?.id === row.host_user_id && score.host) score.host.score += 1;
+    if (resolution.winner?.id === row.guest_user_id && score.guest) score.guest.score += 1;
+  });
+
+  return score;
+}
+
 function serializeCompetition(row, roundState = {}) {
   return {
     id: row.id,
@@ -43,6 +74,7 @@ function serializeCompetition(row, roundState = {}) {
     guest: row.guest ? { id: row.guest.id, username: row.guest.username } : null,
     activeRound: roundState.activeRound ?? null,
     latestCompletedRound: roundState.latestCompletedRound ?? null,
+    matchScore: roundState.matchScore ?? emptyMatchScore(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -83,7 +115,7 @@ export class CompetitionService {
     }
 
     if (row.host_user_id === userId) {
-      return serializeCompetition(row, await this.#roundState(row.id));
+      return serializeCompetition(row, await this.#roundState(row));
     }
 
     if (row.guest_user_id && row.guest_user_id !== userId) {
@@ -95,7 +127,7 @@ export class CompetitionService {
     }
 
     if (row.guest_user_id === userId) {
-      return serializeCompetition(row, await this.#roundState(row.id));
+      return serializeCompetition(row, await this.#roundState(row));
     }
 
     const updated = await this.competitionRepository.setGuestAndActivate(row.id, userId);
@@ -107,7 +139,11 @@ export class CompetitionService {
       throw new AppError('Competition room is not joinable', 'COMPETITION_NOT_JOINABLE', 409);
     }
 
-    return serializeCompetition(updated, await this.#roundState(updated.id));
+    if (this.competitionRoundRepository) {
+      await this.competitionRoundRepository.createNext(updated.id);
+    }
+
+    return serializeCompetition(updated, await this.#roundState(updated));
   }
 
   async getRoom({ userId, code }) {
@@ -120,24 +156,29 @@ export class CompetitionService {
       throw new AppError('Competition room not found', 'COMPETITION_NOT_FOUND', 404);
     }
 
-    return serializeCompetition(row, await this.#roundState(row.id));
+    return serializeCompetition(row, await this.#roundState(row));
   }
 
-  async #roundState(competitionId) {
+  async #roundState(competition) {
     if (!this.competitionRoundRepository || !this.resultRepository) return {};
+    const competitionId = competition.id;
 
     const [activeRoundRow, latestCompletedRoundRow] = await Promise.all([
       this.competitionRoundRepository.findActiveByCompetition(competitionId),
       this.competitionRoundRepository.findLatestCompletedByCompetition(competitionId),
     ]);
 
-    const completedResults = latestCompletedRoundRow
-      ? await this.resultRepository.findByRound(latestCompletedRoundRow.id)
-      : [];
+    const [completedResults, matchResults] = await Promise.all([
+      latestCompletedRoundRow ? this.resultRepository.findByRound(latestCompletedRoundRow.id) : [],
+      this.resultRepository.findCompletedByCompetition
+        ? this.resultRepository.findCompletedByCompetition(competitionId)
+        : [],
+    ]);
 
     return {
       activeRound: serializeRound(activeRoundRow),
       latestCompletedRound: serializeCompletedRound(latestCompletedRoundRow, completedResults),
+      matchScore: serializeMatchScore(competition, matchResults),
     };
   }
 }

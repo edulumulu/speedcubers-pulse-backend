@@ -11,5 +11,5 @@ export const submitResultSchema = Joi.object({
     then: Joi.number().integer().min(0).max(600000).allow(null).optional(),
     otherwise: Joi.number().integer().min(0).max(600000).required(),
   }),
-  penalty: Joi.string().valid('none', '+2', 'dnf').default('none'),
+  penalty: Joi.string().valid('none', '+2', '+4', 'dnf').default('none'),
 });

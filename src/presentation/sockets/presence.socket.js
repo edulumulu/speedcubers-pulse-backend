@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import { authService, presenceService } from '../../infrastructure/container.js';
+import { authService, competitionRepository, presenceService } from '../../infrastructure/container.js';
 
 function allowedOrigins() {
   return process.env.ALLOWED_ORIGINS?.split(',') ?? ['http://localhost:5173'];
@@ -38,12 +38,114 @@ export function initializePresenceSocket(httpServer) {
   });
 
   io.on('connection', async (socket) => {
+    socket.join(`user:${socket.userId}`);
+
     const onlineUser = await presenceService.setOnline(socket.userId);
     if (onlineUser) io.emit('presence:online', onlineUser);
 
     socket.on('presence:heartbeat', async () => {
       const refreshed = await presenceService.refresh(socket.userId);
       if (refreshed) socket.emit('presence:heartbeat:ack', refreshed);
+    });
+
+    socket.on('competition:join', async ({ code } = {}, ack) => {
+      const roomCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
+      const competition = roomCode ? await competitionRepository.findByCode(roomCode) : null;
+      const isParticipant = competition
+        && [competition.host_user_id, competition.guest_user_id].includes(socket.userId);
+
+      if (!isParticipant) {
+        if (ack) ack({ ok: false, error: 'COMPETITION_NOT_FOUND' });
+        return;
+      }
+
+      socket.join(`competition:${roomCode}`);
+      if (ack) ack({ ok: true });
+    });
+
+    socket.on('competition:inspection:start', async ({ code, roundId, startedAt } = {}, ack) => {
+      const roomCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
+      const competition = roomCode ? await competitionRepository.findByCode(roomCode) : null;
+      const isParticipant = competition
+        && [competition.host_user_id, competition.guest_user_id].includes(socket.userId);
+
+      if (!isParticipant) {
+        if (ack) ack({ ok: false, error: 'COMPETITION_NOT_FOUND' });
+        return;
+      }
+
+      const payload = {
+        code: roomCode,
+        roundId: typeof roundId === 'string' ? roundId : null,
+        startedAt: typeof startedAt === 'number' ? startedAt : Date.now(),
+        startedBy: socket.userId,
+      };
+
+      socket.join(`competition:${roomCode}`);
+      const participantRooms = new Set([
+        competition.host_user_id,
+        competition.guest_user_id,
+      ].filter(Boolean).map((userId) => `user:${userId}`));
+
+      participantRooms.forEach((participantRoom) => {
+        io.to(participantRoom).emit('competition:inspection:started', payload);
+      });
+      if (ack) ack({ ok: true });
+    });
+
+    socket.on('competition:round-final:dismiss', async ({ code, roundId } = {}, ack) => {
+      const roomCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
+      const competition = roomCode ? await competitionRepository.findByCode(roomCode) : null;
+      const isParticipant = competition
+        && [competition.host_user_id, competition.guest_user_id].includes(socket.userId);
+
+      if (!isParticipant) {
+        if (ack) ack({ ok: false, error: 'COMPETITION_NOT_FOUND' });
+        return;
+      }
+
+      const payload = {
+        code: roomCode,
+        roundId: typeof roundId === 'string' ? roundId : null,
+        dismissedBy: socket.userId,
+        dismissedAt: Date.now(),
+      };
+      const participantRooms = new Set([
+        competition.host_user_id,
+        competition.guest_user_id,
+      ].filter(Boolean).map((userId) => `user:${userId}`));
+
+      participantRooms.forEach((participantRoom) => {
+        io.to(participantRoom).emit('competition:round-final:dismissed', payload);
+      });
+      if (ack) ack({ ok: true });
+    });
+
+    socket.on('competition:round:changed', async ({ code, roundId } = {}, ack) => {
+      const roomCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
+      const competition = roomCode ? await competitionRepository.findByCode(roomCode) : null;
+      const isParticipant = competition
+        && [competition.host_user_id, competition.guest_user_id].includes(socket.userId);
+
+      if (!isParticipant) {
+        if (ack) ack({ ok: false, error: 'COMPETITION_NOT_FOUND' });
+        return;
+      }
+
+      const payload = {
+        code: roomCode,
+        roundId: typeof roundId === 'string' ? roundId : null,
+        changedBy: socket.userId,
+      };
+      const participantRooms = new Set([
+        competition.host_user_id,
+        competition.guest_user_id,
+      ].filter(Boolean).map((userId) => `user:${userId}`));
+
+      participantRooms.forEach((participantRoom) => {
+        io.to(participantRoom).emit('competition:round:updated', payload);
+      });
+      if (ack) ack({ ok: true });
     });
 
     socket.on('disconnect', async () => {

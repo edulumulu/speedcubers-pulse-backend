@@ -28,6 +28,12 @@ const validUser = {
   password: 'Pass123!',
 };
 
+function refreshCookieHeader(response) {
+  return response.headers['set-cookie']
+    ?.find((cookie) => cookie.startsWith('refresh_token='))
+    ?.split(';')[0];
+}
+
 describe('GET /api/v1/auth/check', () => {
   beforeEach(async () => {
     await request(app).post('/api/v1/auth/register').send({
@@ -141,7 +147,7 @@ describe('POST /api/v1/auth/login', () => {
 describe('POST /api/v1/auth/refresh', () => {
   it('returns new tokens for a valid refresh cookie', async () => {
     const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);
-    const cookie = registerRes.headers['set-cookie'];
+    const cookie = refreshCookieHeader(registerRes);
 
     const res = await request(app)
       .post('/api/v1/auth/refresh')

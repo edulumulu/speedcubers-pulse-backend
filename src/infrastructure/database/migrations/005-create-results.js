@@ -67,7 +67,7 @@ export async function up(queryInterface, Sequelize) {
       allowNull: true,
     },
     penalty: {
-      type: Sequelize.ENUM('none', '+2', 'dnf'),
+      type: Sequelize.ENUM('none', '+2', '+4', 'dnf'),
       allowNull: false,
       defaultValue: 'none',
     },

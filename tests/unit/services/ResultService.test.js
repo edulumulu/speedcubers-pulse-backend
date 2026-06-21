@@ -110,6 +110,27 @@ describe('ResultService', () => {
     }));
   });
 
+  it('adds four seconds for combined +4 penalties', async () => {
+    const { resultRepository, competitionRepository, competitionRoundRepository } = makeRepositories();
+    competitionRepository.findByCode.mockResolvedValue(makeCompetition());
+    competitionRoundRepository.findActiveByCompetition.mockResolvedValue(makeRound());
+    resultRepository.findByRoundAndUser.mockResolvedValue(null);
+    resultRepository.create.mockResolvedValue(makeResult({
+      penalty: '+4',
+      final_time_ms: 19000,
+    }));
+    resultRepository.countByRound.mockResolvedValue(1);
+
+    const service = new ResultService(resultRepository, competitionRepository, competitionRoundRepository);
+    await service.submitResult({ userId: 'guest-id', code: 'ABC234', timeMs: 15000, penalty: '+4' });
+
+    expect(resultRepository.create).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: 'guest-id',
+      penalty: '+4',
+      final_time_ms: 19000,
+    }));
+  });
+
   it('stores null final time for DNF penalties', async () => {
     const { resultRepository, competitionRepository, competitionRoundRepository } = makeRepositories();
     competitionRepository.findByCode.mockResolvedValue(makeCompetition());

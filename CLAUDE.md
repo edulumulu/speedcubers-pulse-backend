@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1 y 7C-2A completadas. Fase 7C-2B pendiente en frontend/docs; sin cambios de contrato backend previstos todavía.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A y 7C-2B completadas. La Fase 7C-2B añade scrambles por ronda, `+4` como penalización acumulada, sincronización Socket.io de inspección/cierre de resultado y marcador acumulado.
 
 ## Arquitectura
 
@@ -20,7 +20,7 @@ infrastructure/ → domain/
 
 Dependency injection manual: `new UserService(userRepository, wcaService)`. Sin frameworks de DI.
 
-**Decisión crítica**: el timer de competencia corre 100% en el cliente. El servidor valida rango (0–600s), persiste resultados por ronda, calcula `final_time_ms`, resuelve ganador/empate cuando ambos usuarios envían y actualiza ranking/Elo si procede; no confiar en timestamps del cliente para seguridad.
+**Decisión crítica**: el timer de competencia corre 100% en el cliente. El servidor sincroniza estados de sala por Socket.io, valida rango (0–600s), persiste resultados por ronda, calcula `final_time_ms`, resuelve ganador/empate cuando ambos usuarios envían y actualiza ranking/Elo si procede; no confiar en timestamps del cliente para seguridad.
 
 ## Stack
 
@@ -120,7 +120,7 @@ login_lock:{email}             → Bloqueo de cuenta activo (TTL: 15 min)
 pwd_reset:{token}              → Token de reset de contraseña → userId (TTL: 15 min)
 ```
 
-Migraciones versionadas: `001-create-users.js`, `002-create-rankings.js`, `003-create-wca-profiles.js`, `004-create-competitions.js`, `005-create-results.js`.
+Migraciones versionadas: `001-create-users.js`, `002-create-rankings.js`, `003-create-wca-profiles.js`, `004-create-competitions.js`, `005-create-results.js`, `006-add-plus-four-result-penalty.js`.
 
 ## Variables de entorno
 
@@ -170,6 +170,8 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 - **Sesión persistente**: `POST /auth/register` y `POST /auth/login` emiten `refresh_token` solo como cookie `httpOnly`; la respuesta JSON devuelve `user` y `tokens.accessToken`, nunca `tokens.refreshToken`. `POST /auth/refresh` acepta cookie o body legacy, rota la cookie y devuelve un nuevo access token; `POST /auth/logout` limpia la cookie.
 - **WCA ID inmutable**: una vez vinculado un WCA ID, `WcaService.validateAndLink` lanza `WCA_ALREADY_LINKED` (409). No se puede cambiar ni desvincular (excepto mediante admin).
 - **Presencia online**: `PresenceService` guarda usuarios conectados en Redis `online:users`; `presence.socket.js` autentica Socket.io con JWT y emite `presence:online`, `presence:offline` y `presence:heartbeat`.
+- **Competición por Socket.io**: `presence.socket.js` también gestiona eventos `competition:join`, `competition:inspection:start`, `competition:round:changed` y `competition:round-final:dismiss`. Los eventos se emiten a las salas privadas `user:<userId>` de host y guest para sincronizar inspección, refresco de sala y paso a marcador/nueva mezcla.
+- **Scrambles de ronda**: `ScrambleGenerator` crea la mezcla de cada nueva `competition_round`; al unirse el guest se prepara la primera ronda activa y cada ronda completada abre la siguiente con nuevo scramble.
 
 ## Migraciones y seeds
 
@@ -211,7 +213,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 7B-3 | Playwright competition 1v1 E2E | ✅ |
 | 7C-1 | Manual Playwright pre-release validation + session hardening | ✅ |
 | 7C-2A | Pulido visual/accesibilidad de `/compete` sin cambios backend | ✅ |
-| 7C-2B | Lógica de inspección y penalizaciones; contrato backend por definir si hace falta | ⏳ |
+| 7C-2B | Lógica de inspección sincronizada, scrambles, `+4` y marcador acumulado | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 

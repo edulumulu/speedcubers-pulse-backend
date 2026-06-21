@@ -18,6 +18,7 @@ function serializeResult(row) {
 function calculateFinalTimeMs(timeMs, penalty) {
   if (penalty === 'dnf') return null;
   if (penalty === '+2') return timeMs + 2000;
+  if (penalty === '+4') return timeMs + 4000;
   return timeMs;
 }
 
