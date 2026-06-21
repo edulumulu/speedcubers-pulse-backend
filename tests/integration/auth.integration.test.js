@@ -67,7 +67,7 @@ describe('POST /api/v1/auth/register', () => {
     const res = await request(app).post('/api/v1/auth/register').send(validUser);
     expect(res.status).toBe(201);
     expect(res.body.tokens.accessToken).toBeDefined();
-    expect(res.body.tokens.refreshToken).toBeDefined();
+    expect(res.body.tokens.refreshToken).toBeUndefined();
     expect(res.body.user.email).toBe(validUser.email);
     expect(res.body.user.passwordHash).toBeUndefined();
     expect(res.headers['set-cookie']?.join(';')).toContain('refresh_token=');
@@ -118,6 +118,7 @@ describe('POST /api/v1/auth/login', () => {
       .send({ email: validUser.email, password: validUser.password });
     expect(res.status).toBe(200);
     expect(res.body.tokens.accessToken).toBeDefined();
+    expect(res.body.tokens.refreshToken).toBeUndefined();
     expect(res.headers['set-cookie']?.join(';')).toContain('refresh_token=');
   });
 
@@ -138,15 +139,17 @@ describe('POST /api/v1/auth/login', () => {
 });
 
 describe('POST /api/v1/auth/refresh', () => {
-  it('returns new tokens for a valid refresh token', async () => {
+  it('returns new tokens for a valid refresh cookie', async () => {
     const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);
-    const { refreshToken } = registerRes.body.tokens;
+    const cookie = registerRes.headers['set-cookie'];
 
     const res = await request(app)
       .post('/api/v1/auth/refresh')
-      .send({ refresh_token: refreshToken });
+      .set('Cookie', cookie)
+      .send({});
     expect(res.status).toBe(200);
     expect(res.body.tokens.accessToken).toBeDefined();
+    expect(res.body.tokens.refreshToken).toBeUndefined();
     expect(res.body.user.username).toBe(validUser.username);
   });
 
@@ -160,6 +163,7 @@ describe('POST /api/v1/auth/refresh', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.tokens.accessToken).toBeDefined();
+    expect(res.body.tokens.refreshToken).toBeUndefined();
     expect(res.body.user.email).toBe(validUser.email);
   });
 

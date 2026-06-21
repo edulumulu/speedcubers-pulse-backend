@@ -36,6 +36,15 @@ function clearRefreshCookie(res) {
   });
 }
 
+function authResponse(result) {
+  return {
+    user: result.user,
+    tokens: {
+      accessToken: result.tokens.accessToken,
+    },
+  };
+}
+
 export class AuthController {
   constructor(authService, wcaService) {
     this.authService = authService;
@@ -56,7 +65,7 @@ export class AuthController {
       }
 
       setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(201).json(result);
+      return res.status(201).json(authResponse(result));
     } catch (err) {
       handleError(err, res);
     }
@@ -67,7 +76,7 @@ export class AuthController {
       const { email, password } = req.body;
       const result = await this.authService.login({ email, password });
       setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(result);
+      return res.status(200).json(authResponse(result));
     } catch (err) {
       handleError(err, res);
     }
@@ -78,7 +87,7 @@ export class AuthController {
       const refreshToken = req.body.refresh_token ?? readCookie(req, REFRESH_COOKIE_NAME);
       const result = await this.authService.refreshTokens(refreshToken);
       setRefreshCookie(res, result.tokens.refreshToken);
-      return res.status(200).json(result);
+      return res.status(200).json(authResponse(result));
     } catch (err) {
       handleError(err, res);
     }
