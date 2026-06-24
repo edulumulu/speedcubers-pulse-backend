@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fase 1 completada (autenticación). Próxima: Fase 2 (Perfiles de usuario).
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A y 7C-2B completadas. La Fase 7C-2B añade scrambles por ronda, `+4` como penalización acumulada, sincronización Socket.io de inspección/cierre de resultado y marcador acumulado.
 
 ## Arquitectura
 
@@ -20,7 +20,7 @@ infrastructure/ → domain/
 
 Dependency injection manual: `new UserService(userRepository, wcaService)`. Sin frameworks de DI.
 
-**Decisión crítica**: el timer de competencia corre 100% en el cliente. El servidor solo valida rango (0–600s). No confiar en timestamps del cliente para seguridad.
+**Decisión crítica**: el timer de competencia corre 100% en el cliente. El servidor sincroniza estados de sala por Socket.io, valida rango (0–600s), persiste resultados por ronda, calcula `final_time_ms`, resuelve ganador/empate cuando ambos usuarios envían y actualiza ranking/Elo si procede; no confiar en timestamps del cliente para seguridad.
 
 ## Stack
 
@@ -31,7 +31,8 @@ Dependency injection manual: `new UserService(userRepository, wcaService)`. Sin 
 - Joi 17 (validación de inputs)
 - Jest 29 (tests)
 - Winston 3 (logging)
-- bcrypt 5, jsonwebtoken 9
+- bcrypt 6, jsonwebtoken 9
+- agora-token (generación de tokens RTC de Agora)
 
 ## Convenciones de commits
 
@@ -67,7 +68,7 @@ Tests de integración usan base de datos real — **no mockear PostgreSQL**.
 tests/
   unit/          # Jest puro, sin DB, sin red
   integration/   # supertest + PostgreSQL real, TRUNCATE en beforeEach
-  e2e/           # Puppeteer, flujo completo
+  e2e/           # Playwright desde frontend, flujos completos
 ```
 
 Targets:
@@ -79,7 +80,7 @@ Targets:
 
 - Prepared statements siempre — nunca interpolar valores en queries SQL
 - bcrypt salt rounds ≥ 12
-- JWT: access token 24h, refresh token 7 días
+- JWT: access token 24h, refresh token 7 días en cookie `httpOnly`
 - Rate limiting: 10 logins fallidos → lockout 15 min; 100 req/min por IP
 - Validar y sanitizar WCA ID antes de llamar a la API externa
 - No exponer stack traces ni detalles internos en respuestas de error
@@ -87,7 +88,7 @@ Targets:
 
 ## Base de datos
 
-Tablas principales: `users`, `wca_profiles`, `competitions`, `results`, `rankings`
+Tablas principales: `users`, `wca_profiles`, `competitions`, `competition_rounds`, `results`, `rankings`
 
 `wca_profiles` almacena únicamente `wca_id` y `country_iso2`. Nombre, foto, rankings y competiciones se consultan en tiempo real desde la WCA API — nunca se persisten (ver ADR-007 en la spec).
 
@@ -95,6 +96,7 @@ Tablas principales: `users`, `wca_profiles`, `competitions`, `results`, `ranking
 |-----------------------------|-------------------|
 | `usuarios` | `users` |
 | `competencias` | `competitions` |
+| `rondas_competencia` | `competition_rounds` |
 | `resultados` | `results` |
 | `ranking` | `rankings` |
 | `usuario_id` | `user_id` |
@@ -108,13 +110,17 @@ Todas las tablas, columnas, migraciones, modelos Sequelize, Redis keys y eventos
 
 Redis keys:
 ```
-ranking:top:100           → Array top 100
-user:{id}:stats           → Stats de usuario
-online:users              → Set de usuarios online
-competition:{id}          → Estado de competencia activa
+ranking:top:100:{event}        → Array top 100 por evento (TTL 5 min)
+user:{id}:stats                → Stats y Elo de usuario (TTL 5 min)
+wca:ranking:{user_id}:{event}  → Ranking WCA oficial del usuario en ese evento (TTL 24h)
+online:users                   → Hash de usuarios online `{ id, username, connectedAt, lastSeenAt }`
+competition:{id}               → Estado de competencia activa
+login_fail:{email}             → Contador de intentos fallidos de login (TTL: 15 min)
+login_lock:{email}             → Bloqueo de cuenta activo (TTL: 15 min)
+pwd_reset:{token}              → Token de reset de contraseña → userId (TTL: 15 min)
 ```
 
-Migraciones versionadas: `001-create-users.js`, `002-...`
+Migraciones versionadas: `001-create-users.js`, `002-create-rankings.js`, `003-create-wca-profiles.js`, `004-create-competitions.js`, `005-create-results.js`, `006-add-plus-four-result-penalty.js`.
 
 ## Variables de entorno
 
@@ -153,6 +159,20 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 | `fastcuber` | cuber3@speedcubers.dev | — |
 | `speedmaster` | cuber4@speedcubers.dev | — |
 
+## Convenciones de arquitectura implementadas
+
+- **`AppError`** (`src/domain/errors/AppError.js`): error tipado con `message`, `code` y `status`. Todos los servicios lo usan para errores de negocio.
+- **`handleError(err, res)`** (`src/presentation/utils/handleError.js`): helper en controllers para devolver 4xx desde AppError o 500 genérico para errores inesperados.
+- **`container.js`** (`src/infrastructure/container.js`): punto único de wiring DI — exporta repositorios, services y controllers de auth, user, WCA, ranking, video y competition. Las rutas importan desde aquí.
+- **`WCA_ID_REGEX`** (`src/infrastructure/config/constants.js`): `/^[0-9]{4}[A-Z]{2,}[0-9]{2}$/` — usado por el validador Joi y el cliente WCA.
+- **`passwordField()`**: factory Joi en `auth.validator.js` — reutiliza las reglas de contraseña (min 8, mayúscula, dígito) en register, reset-password y change-password.
+- **Seguridad**: Helmet (HTTP headers), express-rate-limit (100 req/min por IP), login lockout (10 fallos → 15 min de bloqueo en Redis), `console.log` de tokens gateado por `NODE_ENV !== 'production'`.
+- **Sesión persistente**: `POST /auth/register` y `POST /auth/login` emiten `refresh_token` solo como cookie `httpOnly`; la respuesta JSON devuelve `user` y `tokens.accessToken`, nunca `tokens.refreshToken`. `POST /auth/refresh` acepta cookie o body legacy, rota la cookie y devuelve un nuevo access token; `POST /auth/logout` limpia la cookie.
+- **WCA ID inmutable**: una vez vinculado un WCA ID, `WcaService.validateAndLink` lanza `WCA_ALREADY_LINKED` (409). No se puede cambiar ni desvincular (excepto mediante admin).
+- **Presencia online**: `PresenceService` guarda usuarios conectados en Redis `online:users`; `presence.socket.js` autentica Socket.io con JWT y emite `presence:online`, `presence:offline` y `presence:heartbeat`.
+- **Competición por Socket.io**: `presence.socket.js` también gestiona eventos `competition:join`, `competition:inspection:start`, `competition:round:changed` y `competition:round-final:dismiss`. Los eventos se emiten a las salas privadas `user:<userId>` de host y guest para sincronizar inspección, refresco de sala y paso a marcador/nueva mezcla.
+- **Scrambles de ronda**: `ScrambleGenerator` crea la mezcla de cada nueva `competition_round`; al unirse el guest se prepara la primera ronda activa y cada ronda completada abre la siguiente con nuevo scramble.
+
 ## Migraciones y seeds
 
 El runner usa **umzug** (no sequelize-cli, que no soporta ESM).
@@ -161,15 +181,39 @@ Seeders en `src/infrastructure/database/seeders/` — solo para desarrollo, nunc
 
 ## Fases del MVP
 
+## Ranking — Sistema Elo
+
+**K-factor**: 32 (fijo). **Elo inicial**: 1000. **Suma cero** por partida.
+
+```
+E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
+Δ    = 32 × (W - E(A))          W=1 ganador, W=0 perdedor
+```
+
+- DNF = pérdida (W=0) para el que falla; el oponente gana (W=1). Sin penalización adicional.
+- Ambos DNF o tiempos finales iguales = empate sin actualización de Elo.
+- Elo se actualiza tras **cada ronda completada con ganador**, no al final de la videollamada.
+- Ranking WCA oficial por evento: se obtiene de la WCA API y se cachea en `wca:ranking:{user_id}:{event}` con TTL 24h. **No se persiste en PostgreSQL**.
+
+## Fases del MVP
+
 | Fase | Contenido | Estado |
 |------|-----------|--------|
 | 0 | Setup e infraestructura | ✅ |
 | 1 | Autenticación (JWT + WCA opcional) | ✅ |
-| 2 | Perfiles de usuario | ⏳ Siguiente |
-| 3 | Rankings + Redis cache | — |
-| 4 | Videoconferencia (Agora.io) | — |
-| 5 | Sistema de timing | — |
-| 6 | Presencia online (Socket.io) | — |
+| 2 | Perfiles de usuario | ✅ |
+| 3 | Rankings + Redis cache | ✅ |
+| 4C | Salas de competición con Agora.io: `POST /api/v1/competitions`, `POST /api/v1/competitions/join`, `GET /api/v1/competitions/:code`, token RTC | ✅ |
+| 5A | Submit básico de resultados por ronda: `competition_rounds`, `results`, `POST /api/v1/competitions/:code/results` | ✅ |
+| 5B | Resolución de ronda, ganador/empate, Elo/ranking/stat updates | ✅ |
+| 6 | Presencia online MVP: Socket.io autenticado, Redis `online:users`, `GET /api/v1/users/online` | ✅ |
+| 7A | Estabilidad de sesión: refresh cookie `httpOnly`, recuperación al recargar | ✅ |
+| 7B-1 | Playwright auth/session E2E foundation | ✅ |
+| 7B-2 | Playwright ranking/profile E2E | ✅ |
+| 7B-3 | Playwright competition 1v1 E2E | ✅ |
+| 7C-1 | Manual Playwright pre-release validation + session hardening | ✅ |
+| 7C-2A | Pulido visual/accesibilidad de `/compete` sin cambios backend | ✅ |
+| 7C-2B | Lógica de inspección sincronizada, scrambles, `+4` y marcador acumulado | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 

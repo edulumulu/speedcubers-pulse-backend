@@ -1,3 +1,4 @@
+import { AppError } from '../../domain/errors/AppError.js';
 import { fetchWcaPerson } from '../../infrastructure/external_api/WcaClient.js';
 
 export class WcaService {
@@ -8,27 +9,21 @@ export class WcaService {
   async validateAndLink(userId, wcaId) {
     const existing = await this.wcaProfileRepository.findByWcaId(wcaId);
     if (existing && existing.userId !== userId) {
-      const err = new Error('WCA ID already linked to another account');
-      err.code = 'WCA_ID_TAKEN';
-      err.status = 409;
-      throw err;
+      throw new AppError('WCA ID already linked to another account', 'WCA_ID_TAKEN', 409);
     }
 
     const wcaPerson = await fetchWcaPerson(wcaId);
     if (!wcaPerson) {
-      const err = new Error('WCA ID not found');
-      err.code = 'WCA_ID_NOT_FOUND';
-      err.status = 404;
-      throw err;
+      throw new AppError('WCA ID not found', 'WCA_ID_NOT_FOUND', 404);
     }
 
     const alreadyLinked = await this.wcaProfileRepository.findByUserId(userId);
 
     if (alreadyLinked) {
-      return this.wcaProfileRepository.update(userId, {
-        wcaId: wcaPerson.wcaId,
-        countryIso2: wcaPerson.countryIso2,
-      });
+      const err = new Error('WCA ID already linked to this account and cannot be changed');
+      err.code = 'WCA_ALREADY_LINKED';
+      err.status = 409;
+      throw err;
     }
 
     return this.wcaProfileRepository.create({

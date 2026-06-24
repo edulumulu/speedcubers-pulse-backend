@@ -60,7 +60,7 @@ npm run test:integration  # integration tests (real PostgreSQL)
 npm run test:coverage     # full suite + coverage report
 ```
 
-Coverage targets: >80% global, >90% on auth and competition logic.
+Coverage targets: >80% global, >90% on auth and ranking-critical logic.
 
 ## 🔒 Security
 
@@ -120,11 +120,12 @@ See [PROFESSIONAL_EXECUTION_GUIDE.md](../speedcubers-pulse-docs/PROFESSIONAL_EXE
 
 - Phase 0: Setup ✅
 - Phase 1: Authentication ✅
-- Phase 2: User Profiles (Week 3.5)
-- Phase 3: Rankings (Week 4)
+- Phase 2: User Profiles ✅
+- Phase 3: Rankings + Redis cache ✅
+- Phase 4: Video calling with Agora.io (next)
 - [Full roadmap](../speedcubers-pulse-docs/SPEEDCUBERS_SPAIN_PROJECT_SPEC.md#plan-de-fases)
 
 ---
 
-**Status**: Development (Phase 1 complete)
+**Status**: Development (Fases 0, 1, 2 y 3 completas; próxima Fase 4)
 **Version**: 0.1.0

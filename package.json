@@ -8,10 +8,10 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
-    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/unit",
-    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/integration --passWithNoTests --setupFiles=./tests/integration/setup.js --runInBand",
+    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/unit --forceExit",
+    "test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/integration --passWithNoTests --forceExit --runInBand --setupFiles=./tests/integration/setup.js",
     "test:e2e": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/e2e",
-    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --setupFiles=./tests/integration/setup.js --runInBand",
+    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage --forceExit --runInBand --setupFiles=./tests/integration/setup.js",
     "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
     "db:migrate": "node scripts/migrate.js",
     "db:migrate:undo": "node scripts/migrate.js down",
@@ -25,17 +25,20 @@
     "db:migrate:undo:all": "node scripts/migrate.js down:all"
   },
   "dependencies": {
+    "agora-token": "^2.0.5",
     "axios": "^1.7.2",
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.3.1",
+    "helmet": "^8.2.0",
     "ioredis": "^5.4.1",
     "joi": "^17.13.1",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.12.0",
     "pg-hstore": "^2.3.4",
+    "redis": "^6.0.0",
     "sequelize": "^6.37.3",
     "socket.io": "^4.7.5",
     "uuid": "^14.0.0",
@@ -51,6 +54,11 @@
     "prettier": "^3.3.2",
     "supertest": "^7.0.0",
     "umzug": "^3.8.3"
+  },
+  "overrides": {
+    "sequelize": {
+      "uuid": "^11.1.1"
+    }
   },
   "jest": {
     "testEnvironment": "node",

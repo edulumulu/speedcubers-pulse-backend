@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { WCA_ID_REGEX } from '../config/constants.js';
 
 const WCA_API_BASE = process.env.WCA_API_BASE_URL || 'https://www.worldcubeassociation.org/api/v0';
 
@@ -7,7 +8,7 @@ const WCA_API_BASE = process.env.WCA_API_BASE_URL || 'https://www.worldcubeassoc
  * Format: 4 digits + 2+ uppercase letters + 2 digits (e.g. 2022LUCA04)
  */
 function isValidWcaIdFormat(wcaId) {
-  return /^[0-9]{4}[A-Z]{2,}[0-9]{2}$/.test(wcaId);
+  return WCA_ID_REGEX.test(wcaId);
 }
 
 /**
@@ -27,6 +28,51 @@ export async function fetchWcaPerson(wcaId) {
       name: data.person?.name ?? null,
       countryIso2: data.person?.country_iso2 ?? null,
       avatarUrl: data.person?.avatar?.url ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// WCA event IDs used in rankings API (e.g. '333', '222', '444')
+const WCA_EVENT_MAP = {
+  '3x3': '333',
+  '2x2': '222',
+  '4x4': '444',
+  '5x5': '555',
+  '6x6': '666',
+  '7x7': '777',
+  '3x3oh': '333oh',
+  'mega': 'minx',
+  'pyra': 'pyram',
+  'skewb': 'skewb',
+  'sq1': 'sq1',
+  'clock': 'clock',
+};
+
+/**
+ * Fetches the WCA official average ranking for a person in a given event.
+ * Returns { rank, average } or null if not found.
+ */
+export async function fetchWcaEventRanking(wcaId, event) {
+  if (!isValidWcaIdFormat(wcaId)) return null;
+
+  const wcaEvent = WCA_EVENT_MAP[event] ?? event;
+
+  try {
+    const { data } = await axios.get(`${WCA_API_BASE}/persons/${wcaId}`, {
+      timeout: 5000,
+    });
+
+    const records = data.personal_records ?? {};
+    const eventRecord = records[wcaEvent];
+    const avg = eventRecord?.average;
+
+    if (!avg) return null;
+
+    return {
+      rank: avg.world_rank ?? null,
+      average: avg.best ? avg.best / 100 : null, // centiseconds → seconds
     };
   } catch {
     return null;

@@ -14,3 +14,6 @@ if (existsSync(envPath)) {
     }
   }
 }
+
+process.env.AGORA_APP_ID ||= '00000000000000000000000000000000';
+process.env.AGORA_APP_CERTIFICATE ||= '11111111111111111111111111111111';

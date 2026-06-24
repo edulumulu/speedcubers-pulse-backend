@@ -66,7 +66,7 @@ export class UserService {
       updatedFields.email = data.email;
     }
 
-    if (data.username !== undefined) {
+    if (data.username !== undefined && data.username !== user.username) {
       if (!user.canChangeUsername()) {
         const err = new Error('Username can only be changed once every 30 days');
         err.code = 'USERNAME_CHANGE_TOO_SOON';
