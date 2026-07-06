@@ -3,12 +3,23 @@
  * Contains only business logic and validation rules.
  */
 export class UserEntity {
-  constructor({ id, email, username, passwordHash, usernameChangedAt, createdAt }) {
+  constructor({
+    id,
+    email,
+    username,
+    passwordHash,
+    usernameChangedAt,
+    videoSecondsUsed,
+    videoQuotaResetAt,
+    createdAt,
+  }) {
     this.id = id;
     this.email = email;
     this.username = username;
     this.passwordHash = passwordHash;
     this.usernameChangedAt = usernameChangedAt ?? null;
+    this.videoSecondsUsed = videoSecondsUsed ?? 0;
+    this.videoQuotaResetAt = videoQuotaResetAt ?? null;
     this.createdAt = createdAt ?? new Date();
   }
 

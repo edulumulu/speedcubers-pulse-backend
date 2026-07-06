@@ -310,6 +310,12 @@ describe('POST /api/v1/video/token', () => {
     expect(res.body.uid).toEqual(expect.any(Number));
     expect(res.body.token).toEqual(expect.stringMatching(/^007/));
     expect(res.body.expiresAt).toBeDefined();
+    expect(res.body.quota).toMatchObject({
+      limitSeconds: 3600,
+      usedSeconds: 0,
+      remainingSeconds: 3600,
+    });
+    expect(res.body.quota.resetAt).toBeDefined();
   });
 
   it('returns 400 for invalid channel name', async () => {
@@ -322,5 +328,43 @@ describe('POST /api/v1/video/token', () => {
       .send({ channelName: 'bad channel name' });
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/v1/video/usage', () => {
+  it('stores consumed video seconds for an authenticated user', async () => {
+    const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);
+    const { accessToken } = registerRes.body.tokens;
+
+    const res = await request(app)
+      .post('/api/v1/video/usage')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ seconds: 90 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.quota).toMatchObject({
+      limitSeconds: 3600,
+      usedSeconds: 90,
+      remainingSeconds: 3510,
+    });
+  });
+
+  it('rejects video tokens when the monthly quota is exhausted', async () => {
+    const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);
+    const { accessToken } = registerRes.body.tokens;
+
+    await request(app)
+      .post('/api/v1/video/usage')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ seconds: 3600 });
+
+    const res = await request(app)
+      .post('/api/v1/video/token')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ channelName: 'match-test' });
+
+    expect(res.status).toBe(402);
+    expect(res.body.code).toBe('VIDEO_QUOTA_EXCEEDED');
+    expect(res.body.error).toBe('Se ha agotado tu prueba gratuita mensual');
   });
 });
