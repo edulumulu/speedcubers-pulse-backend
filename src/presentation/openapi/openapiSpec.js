@@ -128,6 +128,11 @@ export const openApiSpec = {
         properties: {
           id: { type: 'string', format: 'uuid' },
           roundNumber: { type: 'integer', example: 1 },
+          event: {
+            type: 'string',
+            enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb'],
+            example: '3x3',
+          },
           scramble: { type: 'string', nullable: true },
           status: { type: 'string', enum: ['active', 'completed'] },
         },
@@ -726,6 +731,50 @@ export const openApiSpec = {
           },
           401: { $ref: '#/components/responses/Unauthorized' },
           404: { $ref: '#/components/responses/ValidationError' },
+        },
+      },
+    },
+    '/competitions/{code}/round/event': {
+      patch: {
+        tags: ['Competitions'],
+        summary: 'Change the cube event for the active round before results are submitted',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'code', in: 'path', required: true, schema: { type: 'string', minLength: 6, maxLength: 6 } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['event'],
+                properties: {
+                  event: {
+                    type: 'string',
+                    enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb'],
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Updated competition room with regenerated active round scramble',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { competition: { $ref: '#/components/schemas/CompetitionRoom' } },
+                },
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          404: { $ref: '#/components/responses/ValidationError' },
+          409: { $ref: '#/components/responses/ValidationError' },
         },
       },
     },

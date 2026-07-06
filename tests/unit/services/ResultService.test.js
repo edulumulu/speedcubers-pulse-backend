@@ -32,6 +32,7 @@ function makeRound(overrides = {}) {
     id: 'round-id',
     competition_id: 'competition-id',
     round_number: 1,
+    event: '3x3',
     scramble: null,
     status: 'active',
     ...overrides,
@@ -82,7 +83,7 @@ describe('ResultService', () => {
     });
     expect(result).toMatchObject({
       roundId: 'round-id',
-      round: { id: 'round-id', number: 1, scramble: null },
+      round: { id: 'round-id', number: 1, event: '3x3', scramble: null },
       timeMs: 15000,
       penalty: 'none',
       finalTimeMs: 15000,
@@ -203,7 +204,7 @@ describe('ResultService', () => {
     const result = await service.submitResult({ userId: 'guest-id', code: 'ABC234', timeMs: 16000 });
 
     expect(competitionRoundRepository.complete).toHaveBeenCalledWith('round-id');
-    expect(competitionRoundRepository.createNext).toHaveBeenCalledWith('competition-id');
+    expect(competitionRoundRepository.createNext).toHaveBeenCalledWith('competition-id', '3x3');
     expect(rankingService.processMatchResult).toHaveBeenCalledWith({
       winnerId: 'host-id',
       loserId: 'guest-id',

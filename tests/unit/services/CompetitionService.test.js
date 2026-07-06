@@ -31,12 +31,14 @@ function makeRoundRepository() {
     createNext: jest.fn(),
     findActiveByCompetition: jest.fn(),
     findLatestCompletedByCompetition: jest.fn(),
+    updateEvent: jest.fn(),
   };
 }
 
 function makeResultRepository() {
   return {
     findByRound: jest.fn(),
+    countByRound: jest.fn(),
   };
 }
 
@@ -81,6 +83,7 @@ describe('CompetitionService', () => {
     roundRepository.findActiveByCompetition.mockResolvedValue({
       id: 'round-id',
       round_number: 1,
+      event: '3x3',
       scramble: 'R U R\' U\'',
       status: 'active',
     });
@@ -90,14 +93,56 @@ describe('CompetitionService', () => {
     const result = await service.joinRoom({ userId: 'guest-id', code: 'abc234' });
 
     expect(repository.setGuestAndActivate).toHaveBeenCalledWith('competition-id', 'guest-id');
-    expect(roundRepository.createNext).toHaveBeenCalledWith('competition-id');
+    expect(roundRepository.createNext).toHaveBeenCalledWith('competition-id', '3x3');
     expect(result.status).toBe('active');
     expect(result.guest).toEqual({ id: 'guest-id', username: 'guest' });
     expect(result.activeRound).toMatchObject({
       number: 1,
+      event: '3x3',
       scramble: 'R U R\' U\'',
       status: 'active',
     });
+  });
+
+  it('updates the active round event before results are submitted', async () => {
+    const repository = makeRepository();
+    const roundRepository = makeRoundRepository();
+    const resultRepository = makeResultRepository();
+    repository.findByCode.mockResolvedValue(makeRow({
+      status: 'active',
+      guest_user_id: 'guest-id',
+      guest: { id: 'guest-id', username: 'guest' },
+    }));
+    roundRepository.findActiveByCompetition
+      .mockResolvedValueOnce({
+        id: 'round-id',
+        round_number: 1,
+        event: '3x3',
+        scramble: 'R U R\' U\'',
+        status: 'active',
+      })
+      .mockResolvedValueOnce({
+        id: 'round-id',
+        round_number: 1,
+        event: '2x2',
+        scramble: 'R U F',
+        status: 'active',
+      });
+    roundRepository.findLatestCompletedByCompetition.mockResolvedValue(null);
+    roundRepository.updateEvent.mockResolvedValue({
+      id: 'round-id',
+      round_number: 1,
+      event: '2x2',
+      scramble: 'R U F',
+      status: 'active',
+    });
+    resultRepository.countByRound.mockResolvedValue(0);
+
+    const service = new CompetitionService(repository, roundRepository, resultRepository);
+    const result = await service.updateActiveRoundEvent({ userId: 'host-id', code: 'ABC234', event: '2x2' });
+
+    expect(roundRepository.updateEvent).toHaveBeenCalledWith('round-id', '2x2');
+    expect(result.activeRound).toMatchObject({ event: '2x2', scramble: 'R U F' });
   });
 
   it('rejects joining a full room', async () => {
