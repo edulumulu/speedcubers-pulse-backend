@@ -41,6 +41,15 @@ export function initUser(sequelize) {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      video_seconds_used: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      video_quota_reset_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
       deleted_at: {
         type: DataTypes.DATE,
         allowNull: true,

@@ -3,7 +3,7 @@ import agoraToken from 'agora-token';
 import { AppError } from '../../domain/errors/AppError.js';
 
 const { RtcRole, RtcTokenBuilder } = agoraToken;
-const TOKEN_TTL_SECONDS = 60 * 60;
+export const TOKEN_TTL_SECONDS = 60 * 60;
 const MAX_AGORA_UID = 2 ** 32 - 1;
 
 function uidFromUserId(userId) {
@@ -28,7 +28,7 @@ export class VideoService {
     this.ttlSeconds = ttlSeconds;
   }
 
-  createRtcToken({ userId, channelName, uid }) {
+  createRtcToken({ userId, channelName, uid, ttlSeconds = this.ttlSeconds }) {
     if (!this.appId || !this.appCertificate) {
       throw new AppError('Agora credentials are not configured', 'AGORA_NOT_CONFIGURED', 500);
     }
@@ -39,15 +39,15 @@ export class VideoService {
     }
 
     const issuedAt = this.now();
-    const expiresAtSeconds = issuedAt + this.ttlSeconds;
+    const expiresAtSeconds = issuedAt + ttlSeconds;
     const token = this.tokenBuilder.buildTokenWithUid(
       this.appId,
       this.appCertificate,
       channelName,
       rtcUid,
       this.role,
-      this.ttlSeconds,
-      this.ttlSeconds,
+      ttlSeconds,
+      ttlSeconds,
     );
 
     if (!token) {

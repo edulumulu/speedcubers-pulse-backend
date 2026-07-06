@@ -15,6 +15,8 @@ export class UserRepository extends IUserRepository {
       username: record.username,
       passwordHash: record.password_hash,
       usernameChangedAt: record.username_changed_at,
+      videoSecondsUsed: record.video_seconds_used,
+      videoQuotaResetAt: record.video_quota_reset_at,
       createdAt: record.created_at,
     });
   }
@@ -48,6 +50,27 @@ export class UserRepository extends IUserRepository {
     if (!record) return null;
     await record.update(data);
     return this.#toEntity(record);
+  }
+
+  async getVideoUsage(id) {
+    const record = await this.User.findByPk(id, {
+      attributes: ['id', 'video_seconds_used', 'video_quota_reset_at'],
+    });
+    if (!record) return null;
+    return {
+      videoSecondsUsed: record.video_seconds_used ?? 0,
+      videoQuotaResetAt: record.video_quota_reset_at,
+    };
+  }
+
+  async updateVideoUsage(id, { videoSecondsUsed, videoQuotaResetAt }) {
+    const record = await this.User.findByPk(id);
+    if (!record) return null;
+    await record.update({
+      video_seconds_used: videoSecondsUsed,
+      video_quota_reset_at: videoQuotaResetAt,
+    });
+    return this.getVideoUsage(id);
   }
 
   async delete(id) {
