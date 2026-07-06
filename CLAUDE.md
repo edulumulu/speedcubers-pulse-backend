@@ -176,6 +176,7 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 - **Competición por Socket.io**: `presence.socket.js` también gestiona eventos `competition:join`, `competition:inspection:start`, `competition:round:changed` y `competition:round-final:dismiss`. Los eventos se emiten a las salas privadas `user:<userId>` de host y guest para sincronizar inspección, refresco de sala y paso a marcador/nueva mezcla.
 - **Scrambles de ronda**: `ScrambleGenerator` crea la mezcla de cada nueva `competition_round`; al unirse el guest se prepara la primera ronda activa y cada ronda completada abre la siguiente con nuevo scramble.
 - **Cuota de vídeo**: `VideoQuotaService` usa `UserRepository.getVideoUsage/updateVideoUsage`, aplica reset mensual lazy, limita `POST /api/v1/video/token` al tiempo restante y expone `POST /api/v1/video/usage` para registrar segundos consumidos desde el frontend. Al agotarse devuelve `VIDEO_QUOTA_EXCEEDED` (402).
+- **API docs/OpenAPI**: `src/presentation/openapi/openapiSpec.js` define la especificación OpenAPI 3.0. `GET /api-docs.json` devuelve el contrato JSON y `GET /api-docs` expone Swagger UI para desarrollo/staging.
 
 ## Migraciones y seeds
 
@@ -219,6 +220,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 7C-2A | Pulido visual/accesibilidad de `/compete` sin cambios backend | ✅ |
 | 7C-2B | Lógica de inspección sincronizada, scrambles, `+4` y marcador acumulado | ✅ |
 | 7D-1 | Cuota mensual gratuita de vídeo con tracking de segundos y token Agora limitado | ✅ |
+| 7D-2 | API docs/OpenAPI para contratos actuales: `/api-docs.json` y `/api-docs` | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
