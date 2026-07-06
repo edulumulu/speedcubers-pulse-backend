@@ -23,6 +23,11 @@ export function defineCompetitionRound(sequelize) {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
+      event: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: '3x3',
+      },
       scramble: {
         type: DataTypes.TEXT,
         allowNull: true,

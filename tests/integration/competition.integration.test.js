@@ -72,8 +72,60 @@ describe('Competition rooms', () => {
         status: 'active',
       },
     });
+    expect(res.body.competition.activeRound.event).toBe('3x3');
     expect(res.body.competition.activeRound.scramble).toEqual(expect.any(String));
     expect(res.body.competition.activeRound.scramble.split(' ')).toHaveLength(20);
+  });
+
+  it('lets a participant change the active round event before submitting results', async () => {
+    const host = await registerUser('host');
+    const guest = await registerUser('guest');
+    const createRes = await request(app)
+      .post('/api/v1/competitions')
+      .set('Authorization', `Bearer ${host.tokens.accessToken}`)
+      .send({ event: '3x3' });
+    await request(app)
+      .post('/api/v1/competitions/join')
+      .set('Authorization', `Bearer ${guest.tokens.accessToken}`)
+      .send({ code: createRes.body.competition.code });
+
+    const res = await request(app)
+      .patch(`/api/v1/competitions/${createRes.body.competition.code}/round/event`)
+      .set('Authorization', `Bearer ${guest.tokens.accessToken}`)
+      .send({ event: '2x2' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.competition.activeRound).toMatchObject({
+      number: 1,
+      event: '2x2',
+      status: 'active',
+    });
+    expect(res.body.competition.activeRound.scramble.split(' ')).toHaveLength(11);
+  });
+
+  it('rejects changing the active round event after a result is submitted', async () => {
+    const host = await registerUser('host');
+    const guest = await registerUser('guest');
+    const createRes = await request(app)
+      .post('/api/v1/competitions')
+      .set('Authorization', `Bearer ${host.tokens.accessToken}`)
+      .send({ event: '3x3' });
+    await request(app)
+      .post('/api/v1/competitions/join')
+      .set('Authorization', `Bearer ${guest.tokens.accessToken}`)
+      .send({ code: createRes.body.competition.code });
+    await request(app)
+      .post(`/api/v1/competitions/${createRes.body.competition.code}/results`)
+      .set('Authorization', `Bearer ${host.tokens.accessToken}`)
+      .send({ timeMs: 12000, penalty: 'none' });
+
+    const res = await request(app)
+      .patch(`/api/v1/competitions/${createRes.body.competition.code}/round/event`)
+      .set('Authorization', `Bearer ${guest.tokens.accessToken}`)
+      .send({ event: '2x2' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('ROUND_EVENT_LOCKED');
   });
 
   it('rejects a third user when the room is full', async () => {
