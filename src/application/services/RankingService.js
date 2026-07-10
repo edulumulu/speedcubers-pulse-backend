@@ -34,22 +34,22 @@ export class RankingService {
   /**
    * Returns or creates a ranking row for a user.
    */
-  async getOrCreate(userId) {
-    let row = await this.rankingRepository.findByUserId(userId);
+  async getOrCreate(userId, event = '3x3') {
+    let row = await this.rankingRepository.findByUserId(userId, event);
     if (!row) {
-      row = await this.rankingRepository.upsert(userId, { elo: ELO_START });
+      row = await this.rankingRepository.upsert(userId, { elo: ELO_START }, event);
     }
     return row;
   }
 
   /**
    * Processes a finished match result and updates both players' Elo.
-   * @param {{ winnerId, loserId, winnerTime, loserTime, loserIsDnf }}
+   * @param {{ winnerId, loserId, winnerTime, loserTime, loserIsDnf, event }}
    */
-  async processMatchResult({ winnerId, loserId, winnerTime, loserTime, loserIsDnf }) {
+  async processMatchResult({ winnerId, loserId, winnerTime, loserTime, loserIsDnf, event = '3x3' }) {
     const [winnerRanking, loserRanking] = await Promise.all([
-      this.getOrCreate(winnerId),
-      this.getOrCreate(loserId),
+      this.getOrCreate(winnerId, event),
+      this.getOrCreate(loserId, event),
     ]);
 
     const { newEloWinner, newEloLoser } = calculateElo(winnerRanking.elo, loserRanking.elo);
@@ -71,7 +71,7 @@ export class RankingService {
         total_matches: winnerRanking.total_matches + 1,
         pb_time: winnerPb,
         average_time: winnerAvg,
-      }),
+      }, event),
       this.rankingRepository.upsert(loserId, {
         elo: newEloLoser,
         wins: loserRanking.wins,
@@ -80,14 +80,13 @@ export class RankingService {
         total_matches: loserRanking.total_matches + 1,
         pb_time: loserPb,
         average_time: loserAvg,
-      }),
+      }, event),
     ]);
 
-    // Invalidate caches for both users and all events (blanket invalidation)
     await Promise.all([
-      this.cacheService.invalidateUserStats(winnerId),
-      this.cacheService.invalidateUserStats(loserId),
-      this._invalidateAllEventRankings(),
+      this.cacheService.invalidateUserStats(winnerId, event),
+      this.cacheService.invalidateUserStats(loserId, event),
+      this.cacheService.invalidateRanking(event),
     ]);
 
     return { newEloWinner, newEloLoser };
@@ -100,7 +99,7 @@ export class RankingService {
     const cached = await this.cacheService.getRanking(event);
     if (cached) return cached;
 
-    const rows = await this.rankingRepository.findTop100();
+    const rows = await this.rankingRepository.findTop100(event);
 
     const result = await Promise.all(
       rows.map(async (row, index) => {
@@ -121,6 +120,7 @@ export class RankingService {
           position: index + 1,
           userId: row.user_id,
           username: row.user.username,
+          event: row.event,
           elo: row.elo,
           wins: row.wins,
           losses: row.losses,
@@ -142,10 +142,10 @@ export class RankingService {
    * Returns stats for a single user, with WCA ranking if available.
    */
   async getUserStats(userId, event = '3x3') {
-    const cached = await this.cacheService.getUserStats(userId);
+    const cached = await this.cacheService.getUserStats(userId, event);
     if (cached) return cached;
 
-    const row = await this.rankingRepository.findByUserId(userId);
+    const row = await this.rankingRepository.findByUserId(userId, event);
     if (!row) return null;
 
     const wcaId = row.user?.wcaProfile?.wca_id ?? null;
@@ -163,6 +163,7 @@ export class RankingService {
 
     const stats = {
       userId,
+      event: row.event,
       elo: row.elo,
       wins: row.wins,
       losses: row.losses,
@@ -174,7 +175,7 @@ export class RankingService {
       wca_ranking: wcaRanking,
     };
 
-    await this.cacheService.setUserStats(userId, stats);
+    await this.cacheService.setUserStats(userId, event, stats);
     return stats;
   }
 
@@ -191,10 +192,5 @@ export class RankingService {
     if (currentAvg === null || currentAvg === undefined || validMatchCount === 0) return newTime;
     // Running cumulative average
     return (currentAvg * validMatchCount + newTime) / (validMatchCount + 1);
-  }
-
-  async _invalidateAllEventRankings() {
-    const events = ['3x3', '2x2', '4x4', '5x5', '6x6', '7x7', '3x3oh', 'mega', 'pyra', 'skewb', 'sq1', 'clock'];
-    await Promise.all(events.map((e) => this.cacheService.invalidateRanking(e)));
   }
 }

@@ -103,6 +103,7 @@ export class ResultService {
         winnerTime: finalTimeMsToSeconds(roundResolution.winningTimeMs),
         loserTime: finalTimeMsToSeconds(roundResolution.losingTimeMs),
         loserIsDnf: roundResolution.loserIsDnf,
+        event: round.event,
       });
       roundResolution.elo = {
         winner: elo.newEloWinner,

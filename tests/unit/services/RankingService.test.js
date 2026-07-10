@@ -40,6 +40,7 @@ describe('calculateElo', () => {
 
 function makeRankingRow(overrides = {}) {
   return {
+    event: '3x3',
     elo: 1000,
     wins: 0,
     losses: 0,
@@ -56,7 +57,7 @@ function makeMockRepo(winnerRow, loserRow) {
     findByUserId: jest.fn(async (id) =>
       id === 'winner' ? winnerRow : id === 'loser' ? loserRow : null,
     ),
-    upsert: jest.fn(async (userId, fields) => ({ user_id: userId, ...fields })),
+    upsert: jest.fn(async (userId, fields, event = '3x3') => ({ user_id: userId, event, ...fields })),
     findTop100: jest.fn(async () => []),
   };
 }
@@ -88,8 +89,13 @@ describe('RankingService.processMatchResult', () => {
       winnerTime: 10.5,
       loserTime: 12.3,
       loserIsDnf: false,
+      event: '2x2',
     });
 
+    expect(repo.findByUserId).toHaveBeenCalledWith('winner', '2x2');
+    expect(repo.findByUserId).toHaveBeenCalledWith('loser', '2x2');
+    expect(repo.upsert).toHaveBeenCalledWith('winner', expect.any(Object), '2x2');
+    expect(repo.upsert).toHaveBeenCalledWith('loser', expect.any(Object), '2x2');
     const winnerUpsert = repo.upsert.mock.calls.find(([id]) => id === 'winner')[1];
     const loserUpsert = repo.upsert.mock.calls.find(([id]) => id === 'loser')[1];
 
@@ -173,9 +179,29 @@ describe('RankingService.processMatchResult', () => {
       loserIsDnf: false,
     });
 
-    expect(cache.invalidateUserStats).toHaveBeenCalledWith('winner');
-    expect(cache.invalidateUserStats).toHaveBeenCalledWith('loser');
-    expect(cache.invalidateRanking).toHaveBeenCalled();
+    expect(cache.invalidateUserStats).toHaveBeenCalledWith('winner', '3x3');
+    expect(cache.invalidateUserStats).toHaveBeenCalledWith('loser', '3x3');
+    expect(cache.invalidateRanking).toHaveBeenCalledWith('3x3');
+  });
+
+  test('invalidates only the ranking cache for the played event', async () => {
+    const repo = makeMockRepo(makeRankingRow({ event: '2x2' }), makeRankingRow({ event: '2x2' }));
+    const cache = makeMockCache();
+    const service = new RankingService(repo, cache);
+
+    await service.processMatchResult({
+      winnerId: 'winner',
+      loserId: 'loser',
+      winnerTime: 4.0,
+      loserTime: 5.0,
+      loserIsDnf: false,
+      event: '2x2',
+    });
+
+    expect(cache.invalidateUserStats).toHaveBeenCalledWith('winner', '2x2');
+    expect(cache.invalidateUserStats).toHaveBeenCalledWith('loser', '2x2');
+    expect(cache.invalidateRanking).toHaveBeenCalledTimes(1);
+    expect(cache.invalidateRanking).toHaveBeenCalledWith('2x2');
   });
 });
 
@@ -191,5 +217,17 @@ describe('RankingService.getTop100', () => {
 
     expect(result).toEqual(cachedData);
     expect(repo.findTop100).not.toHaveBeenCalled();
+  });
+
+  test('loads uncached ranking for the requested event', async () => {
+    const repo = makeMockRepo(makeRankingRow(), makeRankingRow());
+    const cache = makeMockCache();
+    repo.findTop100.mockResolvedValueOnce([]);
+
+    const service = new RankingService(repo, cache);
+    await service.getTop100('pyraminx');
+
+    expect(repo.findTop100).toHaveBeenCalledWith('pyraminx');
+    expect(cache.setRanking).toHaveBeenCalledWith('pyraminx', []);
   });
 });

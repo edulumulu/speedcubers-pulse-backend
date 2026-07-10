@@ -27,13 +27,13 @@ async function registerUser(username) {
   return res.body;
 }
 
-async function createActiveCompetition() {
+async function createActiveCompetition(event = '3x3') {
   const host = await registerUser('host');
   const guest = await registerUser('guest');
   const createRes = await request(app)
     .post('/api/v1/competitions')
     .set('Authorization', `Bearer ${host.tokens.accessToken}`)
-    .send({ event: '3x3' });
+    .send({ event });
   await request(app)
     .post('/api/v1/competitions/join')
     .set('Authorization', `Bearer ${guest.tokens.accessToken}`)
@@ -137,6 +137,34 @@ describe('Competition results', () => {
     expect(rankingRes.body.ranking).toEqual(expect.arrayContaining([
       expect.objectContaining({ username: 'host', elo: 1016, wins: 1, losses: 0, total_matches: 1 }),
       expect.objectContaining({ username: 'guest', elo: 984, wins: 0, losses: 1, total_matches: 1 }),
+    ]));
+  });
+
+  it('updates only the ranking for the round event', async () => {
+    const { host, guest, code } = await createActiveCompetition('2x2');
+
+    await request(app)
+      .post(`/api/v1/competitions/${code}/results`)
+      .set('Authorization', `Bearer ${host.tokens.accessToken}`)
+      .send({ timeMs: 4234 });
+    const guestRoundOne = await request(app)
+      .post(`/api/v1/competitions/${code}/results`)
+      .set('Authorization', `Bearer ${guest.tokens.accessToken}`)
+      .send({ timeMs: 5234 });
+
+    expect(guestRoundOne.status).toBe(201);
+    expect(guestRoundOne.body.result.round).toMatchObject({ event: '2x2' });
+
+    const twoByTwoRanking = await request(app).get('/api/v1/ranking?event=2x2');
+    expect(twoByTwoRanking.body.ranking).toEqual(expect.arrayContaining([
+      expect.objectContaining({ username: 'host', event: '2x2', elo: 1016, wins: 1, losses: 0 }),
+      expect.objectContaining({ username: 'guest', event: '2x2', elo: 984, wins: 0, losses: 1 }),
+    ]));
+
+    const threeByThreeRanking = await request(app).get('/api/v1/ranking?event=3x3');
+    expect(threeByThreeRanking.body.ranking).toEqual(expect.arrayContaining([
+      expect.objectContaining({ username: 'host', event: '3x3', elo: 1000, wins: 0, losses: 0 }),
+      expect.objectContaining({ username: 'guest', event: '3x3', elo: 1000, wins: 0, losses: 0 }),
     ]));
   });
 

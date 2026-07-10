@@ -82,6 +82,7 @@ export const openApiSpec = {
         properties: {
           userId: { type: 'string', format: 'uuid' },
           username: { type: 'string' },
+          event: { type: 'string', example: '3x3' },
           elo: { type: 'integer', example: 1000 },
           wins: { type: 'integer' },
           losses: { type: 'integer' },
@@ -590,7 +591,7 @@ export const openApiSpec = {
             schema: {
               type: 'string',
               default: '3x3',
-              enum: ['3x3', '2x2', '4x4', '5x5', '6x6', '7x7', '3x3oh', 'mega', 'pyra', 'skewb', 'sq1', 'clock'],
+              enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb'],
             },
           },
         ],

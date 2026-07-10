@@ -211,6 +211,7 @@ describe('ResultService', () => {
       winnerTime: 15,
       loserTime: 16,
       loserIsDnf: false,
+      event: '3x3',
     });
     expect(result.roundResolution).toMatchObject({
       status: 'completed',
