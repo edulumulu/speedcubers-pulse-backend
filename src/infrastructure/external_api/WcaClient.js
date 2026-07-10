@@ -42,12 +42,9 @@ const WCA_EVENT_MAP = {
   '5x5': '555',
   '6x6': '666',
   '7x7': '777',
-  '3x3oh': '333oh',
-  'mega': 'minx',
-  'pyra': 'pyram',
+  oh: '333oh',
+  pyraminx: 'pyram',
   'skewb': 'skewb',
-  'sq1': 'sq1',
-  'clock': 'clock',
 };
 
 /**

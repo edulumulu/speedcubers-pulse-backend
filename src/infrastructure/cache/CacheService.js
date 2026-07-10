@@ -65,20 +65,20 @@ class CacheService {
 
   // --- User stats ---
 
-  userStatsKey(userId) {
-    return `user:${userId}:stats`;
+  userStatsKey(userId, event = '3x3') {
+    return `user:${userId}:stats:${event}`;
   }
 
-  async getUserStats(userId) {
-    return this.get(this.userStatsKey(userId));
+  async getUserStats(userId, event = '3x3') {
+    return this.get(this.userStatsKey(userId, event));
   }
 
-  async setUserStats(userId, data) {
-    return this.set(this.userStatsKey(userId), data, TTL_USER_STATS);
+  async setUserStats(userId, event, data) {
+    return this.set(this.userStatsKey(userId, event), data, TTL_USER_STATS);
   }
 
-  async invalidateUserStats(userId) {
-    return this.del(this.userStatsKey(userId));
+  async invalidateUserStats(userId, event = '3x3') {
+    return this.del(this.userStatsKey(userId, event));
   }
 
   // --- WCA official ranking by user + event ---

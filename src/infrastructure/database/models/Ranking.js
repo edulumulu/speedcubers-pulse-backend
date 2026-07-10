@@ -17,7 +17,11 @@ export function defineRanking(sequelize) {
       user_id: {
         type: DataTypes.UUID,
         allowNull: false,
-        unique: true,
+      },
+      event: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: '3x3',
       },
       elo: {
         type: DataTypes.INTEGER,
@@ -61,6 +65,15 @@ export function defineRanking(sequelize) {
       timestamps: true,
       createdAt: false,
       updatedAt: 'updated_at',
+      indexes: [
+        {
+          unique: true,
+          fields: ['user_id', 'event'],
+        },
+        {
+          fields: ['event', 'elo'],
+        },
+      ],
     },
   );
   return Ranking;

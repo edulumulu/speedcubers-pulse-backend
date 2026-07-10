@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7E-1 y 7E-2 completadas. La Fase 7E permite alternar cubo por ronda dentro de una misma sala y generar scrambles por evento.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7E-1, 7E-2 y 7E-3 completadas. La Fase 7E permite alternar cubo por ronda dentro de una misma sala, generar scrambles por evento y mantener rankings/Elo separados por cubo.
 
 ## Arquitectura
 
@@ -94,6 +94,8 @@ Tablas principales: `users`, `wca_profiles`, `competitions`, `competition_rounds
 
 `competition_rounds.event` define el cubo de cada ronda. Una misma sala puede alternar eventos entre rondas; `PATCH /api/v1/competitions/:code/round/event` solo puede cambiar la ronda activa antes de que existan resultados y regenera el scramble para ese evento.
 
+`rankings.event` separa Elo, PB, media, victorias, derrotas y DNF por cubo. La fila base de registro se crea para `3x3`; el resto de eventos se crean de forma lazy al resolver una ronda de ese cubo. La restricción única es `(user_id, event)`.
+
 `wca_profiles` almacena únicamente `wca_id` y `country_iso2`. Nombre, foto, rankings y competiciones se consultan en tiempo real desde la WCA API — nunca se persisten (ver ADR-007 en la spec).
 
 | Nombre en spec (referencia) | Nombre real en BD |
@@ -115,7 +117,7 @@ Todas las tablas, columnas, migraciones, modelos Sequelize, Redis keys y eventos
 Redis keys:
 ```
 ranking:top:100:{event}        → Array top 100 por evento (TTL 5 min)
-user:{id}:stats                → Stats y Elo de usuario (TTL 5 min)
+user:{id}:stats:{event}        → Stats y Elo de usuario por evento (TTL 5 min)
 wca:ranking:{user_id}:{event}  → Ranking WCA oficial del usuario en ese evento (TTL 24h)
 online:users                   → Hash de usuarios online `{ id, username, connectedAt, lastSeenAt }`
 competition:{id}               → Estado de competencia activa
@@ -124,7 +126,7 @@ login_lock:{email}             → Bloqueo de cuenta activo (TTL: 15 min)
 pwd_reset:{token}              → Token de reset de contraseña → userId (TTL: 15 min)
 ```
 
-Migraciones versionadas: `001-create-users.js`, `002-create-wca-profiles.js`, `003-create-rankings.js`, `004-create-competitions.js`, `005-create-results.js`, `006-add-plus-four-result-penalty.js`, `007-add-video-quota-to-users.js`, `008-add-event-to-competition-rounds.js`.
+Migraciones versionadas: `001-create-users.js`, `002-create-wca-profiles.js`, `003-create-rankings.js`, `004-create-competitions.js`, `005-create-results.js`, `006-add-plus-four-result-penalty.js`, `007-add-video-quota-to-users.js`, `008-add-event-to-competition-rounds.js`, `009-add-event-to-rankings.js`.
 
 ## Variables de entorno
 
@@ -225,6 +227,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 7D-2 | API docs/OpenAPI para contratos actuales: `/api-docs.json` y `/api-docs` | ✅ |
 | 7E-1 | Selección de cubo por ronda dentro de la sala activa | ✅ |
 | 7E-2 | Scrambles por evento para cubos soportados | ✅ |
+| 7E-3 | Rankings, Elo y estadísticas separados por evento | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
