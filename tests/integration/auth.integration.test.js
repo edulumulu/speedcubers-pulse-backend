@@ -14,7 +14,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await sequelize.query('TRUNCATE TABLE wca_profiles, users RESTART IDENTITY CASCADE');
+  await sequelize.query('TRUNCATE TABLE video_global_usage, wca_profiles, users RESTART IDENTITY CASCADE');
   // Clear login lockout keys so tests don't bleed into each other
   const lockKeys = await redis.keys(`${REDIS_LOGIN_LOCK_PREFIX}*`);
   const failKeys = await redis.keys(`${REDIS_LOGIN_FAIL_PREFIX}*`);
@@ -32,6 +32,14 @@ function refreshCookieHeader(response) {
   return response.headers['set-cookie']
     ?.find((cookie) => cookie.startsWith('refresh_token='))
     ?.split(';')[0];
+}
+
+function currentVideoQuotaMonth() {
+  const now = new Date();
+  return {
+    monthStart: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0)).toISOString(),
+    resetAt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0, 0)).toISOString(),
+  };
 }
 
 describe('GET /api/v1/auth/check', () => {
@@ -314,8 +322,34 @@ describe('POST /api/v1/video/token', () => {
       limitSeconds: 3600,
       usedSeconds: 0,
       remainingSeconds: 3600,
+      global: {
+        limitSeconds: 480000,
+        usedSeconds: 0,
+        remainingSeconds: 480000,
+      },
     });
     expect(res.body.quota.resetAt).toBeDefined();
+    expect(res.body.quota.global.resetAt).toBeDefined();
+  });
+
+  it('rejects video tokens when the global monthly quota is exhausted', async () => {
+    const registerRes = await request(app).post('/api/v1/auth/register').send(validUser);
+    const { accessToken } = registerRes.body.tokens;
+
+    const { monthStart, resetAt } = currentVideoQuotaMonth();
+    await sequelize.query(`
+      INSERT INTO video_global_usage (month_start, seconds_used, reset_at, created_at, updated_at)
+      VALUES (:monthStart, 480000, :resetAt, NOW(), NOW())
+    `, { replacements: { monthStart, resetAt } });
+
+    const res = await request(app)
+      .post('/api/v1/video/token')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ channelName: 'match-test' });
+
+    expect(res.status).toBe(402);
+    expect(res.body.code).toBe('VIDEO_GLOBAL_QUOTA_EXCEEDED');
+    expect(res.body.error).toBe('El cupo gratuito mensual de vídeo se ha agotado temporalmente');
   });
 
   it('returns 400 for invalid channel name', async () => {
@@ -346,6 +380,11 @@ describe('POST /api/v1/video/usage', () => {
       limitSeconds: 3600,
       usedSeconds: 90,
       remainingSeconds: 3510,
+      global: {
+        limitSeconds: 480000,
+        usedSeconds: 90,
+        remainingSeconds: 479910,
+      },
     });
   });
 

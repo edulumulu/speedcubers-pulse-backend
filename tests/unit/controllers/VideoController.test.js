@@ -35,6 +35,12 @@ describe('VideoController.createToken', () => {
       usedSeconds: 60,
       remainingSeconds: 3540,
       resetAt: '2026-07-01T00:00:00.000Z',
+      global: {
+        limitSeconds: 480000,
+        usedSeconds: 479700,
+        remainingSeconds: 300,
+        resetAt: '2026-07-01T00:00:00.000Z',
+      },
     };
     videoQuotaService.ensureAvailable.mockResolvedValue(quota);
     videoService.createRtcToken.mockReturnValue(token);
@@ -46,7 +52,7 @@ describe('VideoController.createToken', () => {
     }, response);
 
     expect(videoService.createRtcToken)
-      .toHaveBeenCalledWith({ userId: 'auth-user-id', channelName: 'match_1', ttlSeconds: 3540 });
+      .toHaveBeenCalledWith({ userId: 'auth-user-id', channelName: 'match_1', ttlSeconds: 300 });
     expect(response.status).toHaveBeenCalledWith(200);
     expect(response.json).toHaveBeenCalledWith({ ...token, quota });
   });
@@ -57,6 +63,12 @@ describe('VideoController.createToken', () => {
       usedSeconds: 120,
       remainingSeconds: 3480,
       resetAt: '2026-07-01T00:00:00.000Z',
+      global: {
+        limitSeconds: 480000,
+        usedSeconds: 180,
+        remainingSeconds: 479820,
+        resetAt: '2026-07-01T00:00:00.000Z',
+      },
     };
     videoQuotaService.consume.mockResolvedValue(quota);
     const response = res();

@@ -5,6 +5,7 @@ import { defineRanking } from './Ranking.js';
 import { defineCompetition } from './Competition.js';
 import { defineCompetitionRound } from './CompetitionRound.js';
 import { defineResult } from './Result.js';
+import { defineVideoGlobalUsage } from './VideoGlobalUsage.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const config = require('../config.cjs');
@@ -25,6 +26,7 @@ const models = {
   Competition: defineCompetition(sequelize),
   CompetitionRound: defineCompetitionRound(sequelize),
   Result: defineResult(sequelize),
+  VideoGlobalUsage: defineVideoGlobalUsage(sequelize),
 };
 
 Object.values(models).forEach((model) => {

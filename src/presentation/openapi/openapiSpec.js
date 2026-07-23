@@ -156,6 +156,15 @@ export const openApiSpec = {
           usedSeconds: { type: 'integer', example: 90 },
           remainingSeconds: { type: 'integer', example: 3510 },
           resetAt: { type: 'string', format: 'date-time' },
+          global: {
+            type: 'object',
+            properties: {
+              limitSeconds: { type: 'integer', example: 480000 },
+              usedSeconds: { type: 'integer', example: 1200 },
+              remainingSeconds: { type: 'integer', example: 478800 },
+              resetAt: { type: 'string', format: 'date-time' },
+            },
+          },
         },
       },
       VideoToken: {
