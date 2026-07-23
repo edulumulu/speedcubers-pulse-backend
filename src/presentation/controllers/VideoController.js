@@ -12,7 +12,7 @@ export class VideoController {
       const token = this.videoService.createRtcToken({
         userId: req.userId,
         channelName: req.body.channelName,
-        ttlSeconds: Math.min(this.videoService.ttlSeconds, quota.remainingSeconds),
+        ttlSeconds: Math.min(this.videoService.ttlSeconds, quota.remainingSeconds, quota.global.remainingSeconds),
       });
 
       return res.status(200).json({ ...token, quota });

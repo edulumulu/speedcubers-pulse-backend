@@ -4,6 +4,7 @@ import { RankingRepository } from './repositories/RankingRepository.js';
 import { CompetitionRepository } from './repositories/CompetitionRepository.js';
 import { CompetitionRoundRepository } from './repositories/CompetitionRoundRepository.js';
 import { ResultRepository } from './repositories/ResultRepository.js';
+import { VideoGlobalUsageRepository } from './repositories/VideoGlobalUsageRepository.js';
 import { AuthService } from '../application/services/AuthService.js';
 import { WcaService } from '../application/services/WcaService.js';
 import { RankingService } from '../application/services/RankingService.js';
@@ -28,12 +29,13 @@ const rankingRepository = new RankingRepository(models);
 const competitionRepository = new CompetitionRepository(models);
 const competitionRoundRepository = new CompetitionRoundRepository(models);
 const resultRepository = new ResultRepository(models);
+const videoGlobalUsageRepository = new VideoGlobalUsageRepository(models);
 
 const wcaService = new WcaService(wcaProfileRepository);
 const authService = new AuthService(userRepository, rankingRepository);
 const rankingService = new RankingService(rankingRepository, cacheService);
 const videoService = new VideoService();
-const videoQuotaService = new VideoQuotaService(userRepository);
+const videoQuotaService = new VideoQuotaService(userRepository, videoGlobalUsageRepository);
 const competitionService = new CompetitionService(competitionRepository, competitionRoundRepository, resultRepository);
 const resultService = new ResultService(resultRepository, competitionRepository, competitionRoundRepository, rankingService);
 const presenceService = new PresenceService(redis, userRepository);
@@ -52,6 +54,7 @@ export {
   competitionRepository,
   competitionRoundRepository,
   resultRepository,
+  videoGlobalUsageRepository,
   wcaService,
   authService,
   rankingService,
