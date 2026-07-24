@@ -107,6 +107,29 @@ const EVENT_CONFIG = {
     ],
     modifiers: ['', '\''],
   },
+  megaminx: {
+    length: 70,
+    moves: [
+      { face: 'R', axis: 'r', modifiers: ['++', '--'] },
+      { face: 'D', axis: 'd', modifiers: ['++', '--'] },
+      { face: 'U', axis: 'u', modifiers: ['', '\''] },
+    ],
+    modifiers: ['', '\''],
+  },
+  fto: {
+    length: 35,
+    moves: [
+      { face: 'U', axis: 'u' },
+      { face: 'D', axis: 'd' },
+      { face: 'R', axis: 'r' },
+      { face: 'L', axis: 'l' },
+      { face: 'F', axis: 'f' },
+      { face: 'B', axis: 'b' },
+      { face: 'BR', axis: 'br' },
+      { face: 'BL', axis: 'bl' },
+    ],
+    modifiers: ['', '\''],
+  },
 };
 
 const DEFAULT_EVENT = '3x3';
@@ -134,7 +157,7 @@ export class ScrambleGenerator {
       const candidates = movesConfig.filter((move) =>
         move.face !== previousFace && move.axis !== previousAxis);
       const move = pickRandom(candidates, this.random);
-      const modifier = pickRandom(modifiers, this.random);
+      const modifier = pickRandom(move.modifiers ?? modifiers, this.random);
 
       moves.push(`${move.face}${modifier}`);
       previousFace = move.face;

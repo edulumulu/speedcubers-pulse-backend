@@ -44,7 +44,9 @@ const WCA_EVENT_MAP = {
   '7x7': '777',
   oh: '333oh',
   pyraminx: 'pyram',
-  'skewb': 'skewb',
+  skewb: 'skewb',
+  megaminx: 'minx',
+  fto: 'fto',
 };
 
 /**

@@ -131,7 +131,7 @@ export const openApiSpec = {
           roundNumber: { type: 'integer', example: 1 },
           event: {
             type: 'string',
-            enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb'],
+            enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb', 'megaminx', 'fto'],
             example: '3x3',
           },
           scramble: { type: 'string', nullable: true },
@@ -600,7 +600,7 @@ export const openApiSpec = {
             schema: {
               type: 'string',
               default: '3x3',
-              enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb'],
+              enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb', 'megaminx', 'fto'],
             },
           },
         ],
@@ -661,7 +661,7 @@ export const openApiSpec = {
                   event: {
                     type: 'string',
                     default: '3x3',
-                    enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb'],
+                    enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb', 'megaminx', 'fto'],
                   },
                 },
               },
@@ -762,7 +762,7 @@ export const openApiSpec = {
                 properties: {
                   event: {
                     type: 'string',
-                    enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb'],
+                    enum: ['2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb', 'megaminx', 'fto'],
                   },
                 },
               },
