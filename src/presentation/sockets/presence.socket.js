@@ -1,9 +1,6 @@
 import { Server } from 'socket.io';
 import { authService, competitionRepository, presenceService } from '../../infrastructure/container.js';
-
-function allowedOrigins() {
-  return process.env.ALLOWED_ORIGINS?.split(',') ?? ['http://localhost:5173'];
-}
+import { socketCorsOptions } from '../../infrastructure/config/security.js';
 
 function tokenFromHandshake(socket) {
   const authToken = socket.handshake.auth?.token;
@@ -17,11 +14,7 @@ function tokenFromHandshake(socket) {
 
 export function initializePresenceSocket(httpServer) {
   const io = new Server(httpServer, {
-    cors: {
-      origin: allowedOrigins(),
-      credentials: true,
-      methods: ['GET', 'POST'],
-    },
+    cors: socketCorsOptions(),
   });
 
   io.use((socket, next) => {

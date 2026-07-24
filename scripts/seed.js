@@ -12,6 +12,10 @@ const config = require('../src/infrastructure/database/config.cjs');
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env];
 
+if (env === 'production' && process.env.ALLOW_PRODUCTION_SEED !== 'true') {
+  throw new Error('Refusing to run database seeders in production');
+}
+
 const sequelize = new Sequelize(dbConfig.url, {
   dialect: dbConfig.dialect,
   logging: false,
