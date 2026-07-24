@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2, 8A, 8B-1 y 8B-2 completadas. Railway Free queda como staging/demo `develop`, no como producción definitiva.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2, 8A, 8B-1, 8B-2 y 9 completadas. Railway Free queda como staging/demo `develop`, no como producción definitiva.
 
 ## Arquitectura
 
@@ -95,7 +95,7 @@ Tablas principales: `users`, `wca_profiles`, `competitions`, `competition_rounds
 
 `users` incluye `video_seconds_used` y `video_quota_reset_at` para la cuota mensual gratuita por usuario. `video_global_usage` registra el consumo mensual global de Agora para cortar emisión de tokens antes de superar la bolsa gratuita del proyecto. Los valores se miden en segundos; `FREE_VIDEO_MINUTES_PER_MONTH` define el límite por usuario y `FREE_VIDEO_GLOBAL_MINUTES_PER_MONTH` define el límite global mensual.
 
-`competition_rounds.event` define el cubo de cada ronda. Una misma sala puede alternar eventos entre rondas; `PATCH /api/v1/competitions/:code/round/event` solo puede cambiar la ronda activa antes de que existan resultados y regenera el scramble para ese evento.
+`competition_rounds.event` define el cubo de cada ronda. Una misma sala puede alternar eventos entre rondas; `PATCH /api/v1/competitions/:code/round/event` solo puede cambiar la ronda activa antes de que existan resultados y regenera el scramble para ese evento. Eventos soportados: `2x2`, `3x3`, `4x4`, `5x5`, `6x6`, `7x7`, `oh`, `pyraminx`, `skewb`, `megaminx` y `fto`.
 
 `rankings.event` separa Elo, PB, media, victorias, derrotas y DNF por cubo. La fila base de registro se crea para `3x3`; el resto de eventos se crean de forma lazy al resolver una ronda de ese cubo. La restricción única es `(user_id, event)`.
 
@@ -267,6 +267,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 8A | Hardening de seguridad pre-producción: CORS, cookies, proxy, secrets y seeders | ✅ |
 | 8B-1 | Configuración backend para staging/demo Railway Free | ✅ |
 | 8B-2 | Validación real Railway/Vercel, logs internos y smoke test manual | ✅ |
+| 9 | Megaminx y FTO: validadores, OpenAPI, WCA map y scrambles | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 

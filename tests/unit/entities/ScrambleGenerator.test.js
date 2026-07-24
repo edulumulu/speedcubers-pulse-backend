@@ -70,4 +70,33 @@ describe('ScrambleGenerator', () => {
     expect(moves).toHaveLength(11);
     expect(moves.some((move) => /^[ulrb]'?$/.test(move))).toBe(true);
   });
+
+  it('generates megaminx notation with double-turn style moves', () => {
+    const values = [0.0, 0.0, 0.5, 0.5, 0.99, 0.0, 0.2, 0.7];
+    let index = 0;
+    const generator = new ScrambleGenerator({ random: () => values[index++ % values.length] });
+
+    const moves = generator.generate('megaminx').split(' ');
+
+    expect(moves).toHaveLength(70);
+    expect(moves).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^(R|D)(\+\+|--)$/),
+    ]));
+    expect(moves).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^U'?$/),
+    ]));
+  });
+
+  it('generates FTO notation with octahedron faces', () => {
+    const values = [0.0, 0.0, 0.5, 0.5, 0.99, 0.0, 0.2, 0.7];
+    let index = 0;
+    const generator = new ScrambleGenerator({ random: () => values[index++ % values.length] });
+
+    const moves = generator.generate('fto').split(' ');
+
+    expect(moves).toHaveLength(35);
+    expect(moves).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^(U|D|R|L|F|B|BR|BL)'?$/),
+    ]));
+  });
 });
