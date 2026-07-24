@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1 y 7F-2 completadas. La Fase 7E permite alternar cubo por ronda dentro de una misma sala, generar scrambles por evento y mantener rankings/Elo separados por cubo; la Fase 7F deja el pulido visual guiado recogido en frontend/docs.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2 y 8A completadas. La Fase 8A endurece configuración pre-producción: CORS estricto, cookies configurables, proxy trust y seeders bloqueados en producción.
 
 ## Arquitectura
 
@@ -85,6 +85,9 @@ Targets:
 - Validar y sanitizar WCA ID antes de llamar a la API externa
 - No exponer stack traces ni detalles internos en respuestas de error
 - HTTPS obligatorio en staging/prod
+- `ALLOWED_ORIGINS` obligatorio en producción y sin wildcard `*`
+- Refresh cookie configurable con `REFRESH_COOKIE_DOMAIN` y `REFRESH_COOKIE_SAMESITE`; `Secure` se activa en producción
+- Seeders bloqueados en producción salvo opt-in explícito `ALLOW_PRODUCTION_SEED=true`
 
 ## Base de datos
 
@@ -138,6 +141,11 @@ Ver `.env.example`. Variables críticas:
 - `AGORA_APP_ID` / `AGORA_APP_CERTIFICATE`
 - `FREE_VIDEO_MINUTES_PER_MONTH` — límite mensual gratuito por usuario; default 60 si no se define
 - `FREE_VIDEO_GLOBAL_MINUTES_PER_MONTH` — límite mensual global gratuito de Agora; default 8000 si no se define
+- `ALLOWED_ORIGINS` — orígenes permitidos para HTTP y Socket.io; obligatorio en producción, separado por comas
+- `REFRESH_COOKIE_DOMAIN` — dominio de la cookie de refresh en producción si frontend/backend comparten dominio padre
+- `REFRESH_COOKIE_SAMESITE` — `strict`, `lax` o `none`; default `lax` local y `none` en producción
+- `TRUST_PROXY_HOPS` — saltos de proxy confiables; default 1 en producción
+- `ALLOW_PRODUCTION_SEED` — mantener vacío; solo `true` para un seed productivo controlado
 
 ## Comandos útiles
 
@@ -175,6 +183,7 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 - **`WCA_ID_REGEX`** (`src/infrastructure/config/constants.js`): `/^[0-9]{4}[A-Z]{2,}[0-9]{2}$/` — usado por el validador Joi y el cliente WCA.
 - **`passwordField()`**: factory Joi en `auth.validator.js` — reutiliza las reglas de contraseña (min 8, mayúscula, dígito) en register, reset-password y change-password.
 - **Seguridad**: Helmet (HTTP headers), express-rate-limit (100 req/min por IP), login lockout (10 fallos → 15 min de bloqueo en Redis), `console.log` de tokens gateado por `NODE_ENV !== 'production'`.
+- **Hardening pre-producción**: `src/infrastructure/config/security.js` centraliza CORS HTTP/Socket, cookies de refresh, `trust proxy` y validaciones productivas. En producción no arranca con `ALLOWED_ORIGINS` vacío o `*`; `scripts/seed.js` rechaza ejecución en producción salvo `ALLOW_PRODUCTION_SEED=true`.
 - **Sesión persistente**: `POST /auth/register` y `POST /auth/login` emiten `refresh_token` solo como cookie `httpOnly`; la respuesta JSON devuelve `user` y `tokens.accessToken`, nunca `tokens.refreshToken`. `POST /auth/refresh` acepta cookie o body legacy, rota la cookie y devuelve un nuevo access token; `POST /auth/logout` limpia la cookie.
 - **WCA ID inmutable**: una vez vinculado un WCA ID, `WcaService.validateAndLink` lanza `WCA_ALREADY_LINKED` (409). No se puede cambiar ni desvincular (excepto mediante admin).
 - **Presencia online**: `PresenceService` guarda usuarios conectados en Redis `online:users`; `presence.socket.js` autentica Socket.io con JWT y emite `presence:online`, `presence:offline` y `presence:heartbeat`.
@@ -188,6 +197,7 @@ Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
 El runner usa **umzug** (no sequelize-cli, que no soporta ESM).
 Scripts en `scripts/migrate.js` y `scripts/seed.js`.
 Seeders en `src/infrastructure/database/seeders/` — solo para desarrollo, nunca en producción.
+`scripts/seed.js` bloquea ejecución con `NODE_ENV=production` salvo opt-in explícito `ALLOW_PRODUCTION_SEED=true`.
 
 ## Fases del MVP
 
@@ -232,6 +242,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 7E-3 | Rankings, Elo y estadísticas separados por evento | ✅ |
 | 7F-1 | Pulido UI guiado de ranking, perfil, auth y lobby de competición | ✅ |
 | 7F-2 | Pulido UI guiado de sala activa con overlays e iconos de cubo | ✅ |
+| 8A | Hardening de seguridad pre-producción: CORS, cookies, proxy, secrets y seeders | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
