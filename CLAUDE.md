@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2 y 8A completadas. La Fase 8A endurece configuración pre-producción: CORS estricto, cookies configurables, proxy trust y seeders bloqueados en producción.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2, 8A y 8B-1 completadas. Fase 8B-1 prepara Railway Free como staging/demo `develop`, no como producción definitiva.
 
 ## Arquitectura
 
@@ -147,6 +147,11 @@ Ver `.env.example`. Variables críticas:
 - `TRUST_PROXY_HOPS` — saltos de proxy confiables; default 1 en producción
 - `ALLOW_PRODUCTION_SEED` — mantener vacío; solo `true` para un seed productivo controlado
 
+Entornos documentados:
+- `.env.example` — local.
+- `.env.develop.example` — staging/demo en Railway Free con `NODE_ENV=production` y `APP_ENV=develop`.
+- `.env.production.example` — producción futura con dominio real.
+
 ## Comandos útiles
 
 ```bash
@@ -199,6 +204,10 @@ Scripts en `scripts/migrate.js` y `scripts/seed.js`.
 Seeders en `src/infrastructure/database/seeders/` — solo para desarrollo, nunca en producción.
 `scripts/seed.js` bloquea ejecución con `NODE_ENV=production` salvo opt-in explícito `ALLOW_PRODUCTION_SEED=true`.
 
+## Staging/demo
+
+`railway.json` prepara deploy en Railway con Nixpacks, `npm start` y healthcheck `/health`. El entorno `develop` usa Railway Free para backend/PostgreSQL/Redis solo como staging/demo. En Railway usar `NODE_ENV=production` para activar cookies seguras y `APP_ENV=develop` para distinguir el entorno.
+
 ## Fases del MVP
 
 ## Ranking — Sistema Elo
@@ -243,6 +252,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 7F-1 | Pulido UI guiado de ranking, perfil, auth y lobby de competición | ✅ |
 | 7F-2 | Pulido UI guiado de sala activa con overlays e iconos de cubo | ✅ |
 | 8A | Hardening de seguridad pre-producción: CORS, cookies, proxy, secrets y seeders | ✅ |
+| 8B-1 | Configuración backend para staging/demo Railway Free | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
