@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2, 8A y 8B-1 completadas. Fase 8B-1 prepara Railway Free como staging/demo `develop`, no como producción definitiva.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2, 8A, 8B-1 y 8B-2 completadas. Railway Free queda como staging/demo `develop`, no como producción definitiva.
 
 ## Arquitectura
 
@@ -160,6 +160,7 @@ npm run test:unit             # Tests unitarios (sin BD)
 npm run test:integration      # Tests de integración (PostgreSQL real)
 npm run test:coverage         # Suite completa + reporte de cobertura
 npm run lint                  # ESLint + Prettier check
+npm run smoke:staging         # Smoke test manual contra backend Railway/Vercel origin
 
 npm run db:migrate            # Ejecutar migraciones pendientes
 npm run db:migrate:undo       # Revertir última migración
@@ -171,19 +172,25 @@ npm run db:reset              # Reset completo: revert seeds + migraciones, rela
 
 ## Fixtures de desarrollo
 
-Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
+Tras `npm run db:seed`, 10 usuarios listos con contraseña `Abcd1234`:
 
 | Username | Email | WCA ID |
 |---|---|---|
-| `edulumulu` | eduardo@speedcubers.dev | 2022LUCA04 |
-| `margallego` | margallego@speedcubers.dev | 2013VICE01 |
-| `fastcuber` | cuber3@speedcubers.dev | — |
-| `speedmaster` | cuber4@speedcubers.dev | — |
+| `edulumulu` | edu@edu.com | 2022LUCA04 |
+| `margallego` | mar@mar.com | 2013VICE01 |
+| `fastcuber` | fas@fas.com | — |
+| `speedmaster` | spe@spe.com | — |
+| `alicuber` | ali@ali.com | — |
+| `bobspeed` | bob@bob.com | — |
+| `carloscube` | car@car.com | — |
+| `dianasolve` | dia@dia.com | — |
+| `evecuber` | eve@eve.com | — |
+| `fernanrubik` | fer@fer.com | — |
 
 ## Convenciones de arquitectura implementadas
 
 - **`AppError`** (`src/domain/errors/AppError.js`): error tipado con `message`, `code` y `status`. Todos los servicios lo usan para errores de negocio.
-- **`handleError(err, res)`** (`src/presentation/utils/handleError.js`): helper en controllers para devolver 4xx desde AppError o 500 genérico para errores inesperados.
+- **`handleError(err, res)`** (`src/presentation/utils/handleError.js`): helper en controllers para devolver 4xx desde AppError o 500 genérico para errores inesperados. Los errores internos se registran como `internal_error` con `logger.error` para diagnosticar Railway sin exponer detalles al cliente.
 - **`container.js`** (`src/infrastructure/container.js`): punto único de wiring DI — exporta repositorios, services y controllers de auth, user, WCA, ranking, video y competition. Las rutas importan desde aquí.
 - **`WCA_ID_REGEX`** (`src/infrastructure/config/constants.js`): `/^[0-9]{4}[A-Z]{2,}[0-9]{2}$/` — usado por el validador Joi y el cliente WCA.
 - **`passwordField()`**: factory Joi en `auth.validator.js` — reutiliza las reglas de contraseña (min 8, mayúscula, dígito) en register, reset-password y change-password.
@@ -206,7 +213,13 @@ Seeders en `src/infrastructure/database/seeders/` — solo para desarrollo, nunc
 
 ## Staging/demo
 
-`railway.json` prepara deploy en Railway con Nixpacks, `npm start` y healthcheck `/health`. El entorno `develop` usa Railway Free para backend/PostgreSQL/Redis solo como staging/demo. En Railway usar `NODE_ENV=production` para activar cookies seguras y `APP_ENV=develop` para distinguir el entorno.
+`railway.json` prepara deploy en Railway con Nixpacks, `npm start` y healthcheck `/health`. El entorno `develop` usa Railway Free para backend/PostgreSQL/Redis solo como staging/demo. En Railway usar `NODE_ENV=production` para activar cookies seguras y `APP_ENV=develop` para distinguir el entorno. URL actual backend: `https://speedcubers-pulse-backend-production.up.railway.app`.
+
+Smoke test manual:
+
+```bash
+npm run smoke:staging
+```
 
 ## Fases del MVP
 
@@ -253,6 +266,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 7F-2 | Pulido UI guiado de sala activa con overlays e iconos de cubo | ✅ |
 | 8A | Hardening de seguridad pre-producción: CORS, cookies, proxy, secrets y seeders | ✅ |
 | 8B-1 | Configuración backend para staging/demo Railway Free | ✅ |
+| 8B-2 | Validación real Railway/Vercel, logs internos y smoke test manual | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 
