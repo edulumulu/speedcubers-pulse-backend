@@ -12,8 +12,14 @@ export const competitionCodeSchema = Joi.string()
 
 export const createCompetitionSchema = Joi.object({
   event: Joi.string()
-    .valid('2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb')
+    .valid('2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb', 'megaminx', 'fto')
     .default('3x3'),
+});
+
+export const updateRoundEventSchema = Joi.object({
+  event: Joi.string()
+    .valid('2x2', '3x3', '4x4', '5x5', '6x6', '7x7', 'oh', 'pyraminx', 'skewb', 'megaminx', 'fto')
+    .required(),
 });
 
 export const joinCompetitionSchema = Joi.object({

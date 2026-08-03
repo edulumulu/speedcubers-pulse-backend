@@ -45,7 +45,7 @@ export class ResultService {
       throw new AppError('Competition is not active', 'COMPETITION_NOT_ACTIVE', 409);
     }
 
-    const round = await this.#getOrCreateActiveRound(competition.id);
+    const round = await this.#getOrCreateActiveRound(competition);
     const existing = await this.resultRepository.findByRoundAndUser(round.id, userId);
     if (existing) {
       throw new AppError('Result already submitted', 'RESULT_ALREADY_SUBMITTED', 409);
@@ -60,13 +60,14 @@ export class ResultService {
         final_time_ms: calculateFinalTimeMs(timeMs, penalty),
       });
 
-      const completion = await this.#completeRoundIfReady(competition.id, round.id);
+      const completion = await this.#completeRoundIfReady(competition.id, round);
 
       return {
         ...serializeResult(row),
         round: {
           id: round.id,
           number: round.round_number,
+          event: round.event,
           scramble: round.scramble,
         },
         roundResolution: completion?.roundResolution ?? null,
@@ -80,13 +81,14 @@ export class ResultService {
     }
   }
 
-  async #getOrCreateActiveRound(competitionId) {
-    const active = await this.competitionRoundRepository.findActiveByCompetition(competitionId);
+  async #getOrCreateActiveRound(competition) {
+    const active = await this.competitionRoundRepository.findActiveByCompetition(competition.id);
     if (active) return active;
-    return this.competitionRoundRepository.createNext(competitionId);
+    return this.competitionRoundRepository.createNext(competition.id, competition.event);
   }
 
-  async #completeRoundIfReady(competitionId, roundId) {
+  async #completeRoundIfReady(competitionId, round) {
+    const roundId = round.id;
     const resultCount = await this.resultRepository.countByRound(roundId);
     if (resultCount < 2) return null;
 
@@ -101,6 +103,7 @@ export class ResultService {
         winnerTime: finalTimeMsToSeconds(roundResolution.winningTimeMs),
         loserTime: finalTimeMsToSeconds(roundResolution.losingTimeMs),
         loserIsDnf: roundResolution.loserIsDnf,
+        event: round.event,
       });
       roundResolution.elo = {
         winner: elo.newEloWinner,
@@ -108,7 +111,7 @@ export class ResultService {
       };
     }
 
-    const nextRound = await this.competitionRoundRepository.createNext(competitionId);
+    const nextRound = await this.competitionRoundRepository.createNext(competitionId, round.event);
     return { roundResolution, nextRound };
   }
 }
@@ -117,6 +120,7 @@ function serializeRound(round) {
   return {
     id: round.id,
     number: round.round_number,
+    event: round.event,
     scramble: round.scramble,
     status: round.status,
   };

@@ -58,6 +58,7 @@ export async function up(queryInterface) {
   await queryInterface.bulkInsert('rankings', rankings.map(r => ({
     id: uuidv4(),
     user_id: r.user_id,
+    event: '3x3',
     elo: r.elo,
     wins: r.wins,
     losses: r.losses,

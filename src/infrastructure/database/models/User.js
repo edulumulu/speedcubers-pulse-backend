@@ -3,7 +3,7 @@ import { DataTypes, Model } from 'sequelize';
 export class User extends Model {
   static associate(models) {
     User.hasOne(models.WcaProfile, { foreignKey: 'user_id', as: 'wcaProfile' });
-    User.hasOne(models.Ranking, { foreignKey: 'user_id', as: 'ranking' });
+    User.hasMany(models.Ranking, { foreignKey: 'user_id', as: 'rankings' });
     User.hasMany(models.Competition, { foreignKey: 'host_user_id', as: 'hostedCompetitions' });
     User.hasMany(models.Competition, { foreignKey: 'guest_user_id', as: 'joinedCompetitions' });
     User.hasMany(models.Result, { foreignKey: 'user_id', as: 'results' });
@@ -38,6 +38,15 @@ export function initUser(sequelize) {
         },
       },
       username_changed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      video_seconds_used: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      video_quota_reset_at: {
         type: DataTypes.DATE,
         allowNull: true,
       },

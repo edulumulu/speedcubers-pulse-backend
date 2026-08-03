@@ -39,6 +39,29 @@ describe('VideoService.createRtcToken', () => {
     });
   });
 
+  it('uses the requested ttl when it is lower than the service default', () => {
+    const tokenBuilder = makeTokenBuilder();
+    const service = new VideoService({
+      appId,
+      appCertificate,
+      now: () => 1781092800,
+      tokenBuilder,
+      role: 1,
+      ttlSeconds: 1800,
+    });
+
+    const result = service.createRtcToken({
+      userId: 'auth-user-id',
+      channelName: 'match_abc-123',
+      uid: 42,
+      ttlSeconds: 120,
+    });
+
+    expect(tokenBuilder.buildTokenWithUid)
+      .toHaveBeenCalledWith(appId, appCertificate, 'match_abc-123', 42, 1, 120, 120);
+    expect(result.expiresAt).toBe('2026-06-10T12:02:00.000Z');
+  });
+
   it('derives a stable numeric uid when none is provided', () => {
     const tokenBuilder = makeTokenBuilder();
     const service = new VideoService({

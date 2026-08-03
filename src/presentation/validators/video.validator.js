@@ -11,3 +11,7 @@ export const videoTokenSchema = Joi.object({
       'string.pattern.base': 'Channel name can only contain letters, numbers, hyphens and underscores',
     }),
 });
+
+export const videoUsageSchema = Joi.object({
+  seconds: Joi.number().integer().min(1).max(3600).required(),
+});

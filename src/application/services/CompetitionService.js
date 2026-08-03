@@ -19,6 +19,7 @@ function serializeRound(row) {
   return {
     id: row.id,
     number: row.round_number,
+    event: row.event,
     scramble: row.scramble,
     status: row.status,
   };
@@ -140,7 +141,7 @@ export class CompetitionService {
     }
 
     if (this.competitionRoundRepository) {
-      await this.competitionRoundRepository.createNext(updated.id);
+      await this.competitionRoundRepository.createNext(updated.id, updated.event);
     }
 
     return serializeCompetition(updated, await this.#roundState(updated));
@@ -156,6 +157,38 @@ export class CompetitionService {
       throw new AppError('Competition room not found', 'COMPETITION_NOT_FOUND', 404);
     }
 
+    return serializeCompetition(row, await this.#roundState(row));
+  }
+
+  async updateActiveRoundEvent({ userId, code, event }) {
+    const row = await this.competitionRepository.findByCode(code.toUpperCase());
+    if (!row) {
+      throw new AppError('Competition room not found', 'COMPETITION_NOT_FOUND', 404);
+    }
+
+    if (row.host_user_id !== userId && row.guest_user_id !== userId) {
+      throw new AppError('Competition room not found', 'COMPETITION_NOT_FOUND', 404);
+    }
+
+    if (row.status !== 'active') {
+      throw new AppError('Competition is not active', 'COMPETITION_NOT_ACTIVE', 409);
+    }
+
+    if (!this.competitionRoundRepository || !this.resultRepository) {
+      throw new AppError('Competition round is not available', 'COMPETITION_ROUND_NOT_AVAILABLE', 409);
+    }
+
+    const activeRound = await this.competitionRoundRepository.findActiveByCompetition(row.id);
+    if (!activeRound) {
+      throw new AppError('Competition round is not available', 'COMPETITION_ROUND_NOT_AVAILABLE', 409);
+    }
+
+    const resultCount = await this.resultRepository.countByRound(activeRound.id);
+    if (resultCount > 0) {
+      throw new AppError('Round event cannot change after results are submitted', 'ROUND_EVENT_LOCKED', 409);
+    }
+
+    await this.competitionRoundRepository.updateEvent(activeRound.id, event);
     return serializeCompetition(row, await this.#roundState(row));
   }
 

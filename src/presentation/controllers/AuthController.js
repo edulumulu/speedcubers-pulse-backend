@@ -1,17 +1,13 @@
 import { handleError } from '../utils/handleError.js';
+import { refreshCookieOptions as buildRefreshCookieOptions } from '../../infrastructure/config/security.js';
 
 const REFRESH_COOKIE_NAME = 'refresh_token';
 const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function refreshCookieOptions() {
-  const isProduction = process.env.NODE_ENV === 'production';
-  return {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+  return buildRefreshCookieOptions({
     maxAge: REFRESH_COOKIE_MAX_AGE_MS,
-    path: '/api/v1/auth',
-  };
+  });
 }
 
 function readCookie(req, name) {

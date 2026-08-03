@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A y 7C-2B completadas. La Fase 7C-2B añade scrambles por ronda, `+4` como penalización acumulada, sincronización Socket.io de inspección/cierre de resultado y marcador acumulado.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2, 8A, 8B-1, 8B-2, 9 y 10 completadas. Railway Free queda como staging/demo `develop`, no como producción definitiva.
 
 ## Arquitectura
 
@@ -26,8 +26,8 @@ Dependency injection manual: `new UserService(userRepository, wcaService)`. Sin 
 
 - Node.js 20 LTS + Express 4
 - PostgreSQL 14 + Sequelize 6
-- Redis 7 (solo caché: ranking, sesiones online)
-- Socket.io 4 (presencia online, señalización competencias)
+- Redis 7 (caché ranking, presencia online, retos directos con TTL)
+- Socket.io 4 (presencia online, retos directos, señalización competencias)
 - Joi 17 (validación de inputs)
 - Jest 29 (tests)
 - Winston 3 (logging)
@@ -85,10 +85,19 @@ Targets:
 - Validar y sanitizar WCA ID antes de llamar a la API externa
 - No exponer stack traces ni detalles internos en respuestas de error
 - HTTPS obligatorio en staging/prod
+- `ALLOWED_ORIGINS` obligatorio en producción y sin wildcard `*`
+- Refresh cookie configurable con `REFRESH_COOKIE_DOMAIN` y `REFRESH_COOKIE_SAMESITE`; `Secure` se activa en producción
+- Seeders bloqueados en producción salvo opt-in explícito `ALLOW_PRODUCTION_SEED=true`
 
 ## Base de datos
 
-Tablas principales: `users`, `wca_profiles`, `competitions`, `competition_rounds`, `results`, `rankings`
+Tablas principales: `users`, `wca_profiles`, `competitions`, `competition_rounds`, `results`, `rankings`, `video_global_usage`
+
+`users` incluye `video_seconds_used` y `video_quota_reset_at` para la cuota mensual gratuita por usuario. `video_global_usage` registra el consumo mensual global de Agora para cortar emisión de tokens antes de superar la bolsa gratuita del proyecto. Los valores se miden en segundos; `FREE_VIDEO_MINUTES_PER_MONTH` define el límite por usuario y `FREE_VIDEO_GLOBAL_MINUTES_PER_MONTH` define el límite global mensual.
+
+`competition_rounds.event` define el cubo de cada ronda. Una misma sala puede alternar eventos entre rondas; `PATCH /api/v1/competitions/:code/round/event` solo puede cambiar la ronda activa antes de que existan resultados y regenera el scramble para ese evento. Eventos soportados: `2x2`, `3x3`, `4x4`, `5x5`, `6x6`, `7x7`, `oh`, `pyraminx`, `skewb`, `megaminx` y `fto`.
+
+`rankings.event` separa Elo, PB, media, victorias, derrotas y DNF por cubo. La fila base de registro se crea para `3x3`; el resto de eventos se crean de forma lazy al resolver una ronda de ese cubo. La restricción única es `(user_id, event)`.
 
 `wca_profiles` almacena únicamente `wca_id` y `country_iso2`. Nombre, foto, rankings y competiciones se consultan en tiempo real desde la WCA API — nunca se persisten (ver ADR-007 en la spec).
 
@@ -111,16 +120,17 @@ Todas las tablas, columnas, migraciones, modelos Sequelize, Redis keys y eventos
 Redis keys:
 ```
 ranking:top:100:{event}        → Array top 100 por evento (TTL 5 min)
-user:{id}:stats                → Stats y Elo de usuario (TTL 5 min)
+user:{id}:stats:{event}        → Stats y Elo de usuario por evento (TTL 5 min)
 wca:ranking:{user_id}:{event}  → Ranking WCA oficial del usuario en ese evento (TTL 24h)
 online:users                   → Hash de usuarios online `{ id, username, connectedAt, lastSeenAt }`
+challenge:{id}                 → Invitación directa a duelo (TTL 30s)
 competition:{id}               → Estado de competencia activa
 login_fail:{email}             → Contador de intentos fallidos de login (TTL: 15 min)
 login_lock:{email}             → Bloqueo de cuenta activo (TTL: 15 min)
 pwd_reset:{token}              → Token de reset de contraseña → userId (TTL: 15 min)
 ```
 
-Migraciones versionadas: `001-create-users.js`, `002-create-rankings.js`, `003-create-wca-profiles.js`, `004-create-competitions.js`, `005-create-results.js`, `006-add-plus-four-result-penalty.js`.
+Migraciones versionadas: `001-create-users.js`, `002-create-wca-profiles.js`, `003-create-rankings.js`, `004-create-competitions.js`, `005-create-results.js`, `006-add-plus-four-result-penalty.js`, `007-add-video-quota-to-users.js`, `008-add-event-to-competition-rounds.js`, `009-add-event-to-rankings.js`, `010-create-video-global-usage.js`.
 
 ## Variables de entorno
 
@@ -130,6 +140,18 @@ Ver `.env.example`. Variables críticas:
 - `JWT_SECRET` — Secreto para firmar tokens
 - `JWT_REFRESH_SECRET`
 - `AGORA_APP_ID` / `AGORA_APP_CERTIFICATE`
+- `FREE_VIDEO_MINUTES_PER_MONTH` — límite mensual gratuito por usuario; default 60 si no se define
+- `FREE_VIDEO_GLOBAL_MINUTES_PER_MONTH` — límite mensual global gratuito de Agora; default 8000 si no se define
+- `ALLOWED_ORIGINS` — orígenes permitidos para HTTP y Socket.io; obligatorio en producción, separado por comas
+- `REFRESH_COOKIE_DOMAIN` — dominio de la cookie de refresh en producción si frontend/backend comparten dominio padre
+- `REFRESH_COOKIE_SAMESITE` — `strict`, `lax` o `none`; default `lax` local y `none` en producción
+- `TRUST_PROXY_HOPS` — saltos de proxy confiables; default 1 en producción
+- `ALLOW_PRODUCTION_SEED` — mantener vacío; solo `true` para un seed productivo controlado
+
+Entornos documentados:
+- `.env.example` — local.
+- `.env.develop.example` — staging/demo en Railway Free con `NODE_ENV=production` y `APP_ENV=develop`.
+- `.env.production.example` — producción futura con dominio real.
 
 ## Comandos útiles
 
@@ -139,6 +161,7 @@ npm run test:unit             # Tests unitarios (sin BD)
 npm run test:integration      # Tests de integración (PostgreSQL real)
 npm run test:coverage         # Suite completa + reporte de cobertura
 npm run lint                  # ESLint + Prettier check
+npm run smoke:staging         # Smoke test manual contra backend Railway/Vercel origin
 
 npm run db:migrate            # Ejecutar migraciones pendientes
 npm run db:migrate:undo       # Revertir última migración
@@ -150,34 +173,55 @@ npm run db:reset              # Reset completo: revert seeds + migraciones, rela
 
 ## Fixtures de desarrollo
 
-Tras `npm run db:seed`, 4 usuarios listos con contraseña `Abcd1234`:
+Tras `npm run db:seed`, 10 usuarios listos con contraseña `Abcd1234`:
 
 | Username | Email | WCA ID |
 |---|---|---|
-| `edulumulu` | eduardo@speedcubers.dev | 2022LUCA04 |
-| `margallego` | margallego@speedcubers.dev | 2013VICE01 |
-| `fastcuber` | cuber3@speedcubers.dev | — |
-| `speedmaster` | cuber4@speedcubers.dev | — |
+| `edulumulu` | edu@edu.com | 2022LUCA04 |
+| `margallego` | mar@mar.com | 2013VICE01 |
+| `fastcuber` | fas@fas.com | — |
+| `speedmaster` | spe@spe.com | — |
+| `alicuber` | ali@ali.com | — |
+| `bobspeed` | bob@bob.com | — |
+| `carloscube` | car@car.com | — |
+| `dianasolve` | dia@dia.com | — |
+| `evecuber` | eve@eve.com | — |
+| `fernanrubik` | fer@fer.com | — |
 
 ## Convenciones de arquitectura implementadas
 
 - **`AppError`** (`src/domain/errors/AppError.js`): error tipado con `message`, `code` y `status`. Todos los servicios lo usan para errores de negocio.
-- **`handleError(err, res)`** (`src/presentation/utils/handleError.js`): helper en controllers para devolver 4xx desde AppError o 500 genérico para errores inesperados.
+- **`handleError(err, res)`** (`src/presentation/utils/handleError.js`): helper en controllers para devolver 4xx desde AppError o 500 genérico para errores inesperados. Los errores internos se registran como `internal_error` con `logger.error` para diagnosticar Railway sin exponer detalles al cliente.
 - **`container.js`** (`src/infrastructure/container.js`): punto único de wiring DI — exporta repositorios, services y controllers de auth, user, WCA, ranking, video y competition. Las rutas importan desde aquí.
 - **`WCA_ID_REGEX`** (`src/infrastructure/config/constants.js`): `/^[0-9]{4}[A-Z]{2,}[0-9]{2}$/` — usado por el validador Joi y el cliente WCA.
 - **`passwordField()`**: factory Joi en `auth.validator.js` — reutiliza las reglas de contraseña (min 8, mayúscula, dígito) en register, reset-password y change-password.
 - **Seguridad**: Helmet (HTTP headers), express-rate-limit (100 req/min por IP), login lockout (10 fallos → 15 min de bloqueo en Redis), `console.log` de tokens gateado por `NODE_ENV !== 'production'`.
+- **Hardening pre-producción**: `src/infrastructure/config/security.js` centraliza CORS HTTP/Socket, cookies de refresh, `trust proxy` y validaciones productivas. En producción no arranca con `ALLOWED_ORIGINS` vacío o `*`; `scripts/seed.js` rechaza ejecución en producción salvo `ALLOW_PRODUCTION_SEED=true`.
 - **Sesión persistente**: `POST /auth/register` y `POST /auth/login` emiten `refresh_token` solo como cookie `httpOnly`; la respuesta JSON devuelve `user` y `tokens.accessToken`, nunca `tokens.refreshToken`. `POST /auth/refresh` acepta cookie o body legacy, rota la cookie y devuelve un nuevo access token; `POST /auth/logout` limpia la cookie.
 - **WCA ID inmutable**: una vez vinculado un WCA ID, `WcaService.validateAndLink` lanza `WCA_ALREADY_LINKED` (409). No se puede cambiar ni desvincular (excepto mediante admin).
 - **Presencia online**: `PresenceService` guarda usuarios conectados en Redis `online:users`; `presence.socket.js` autentica Socket.io con JWT y emite `presence:online`, `presence:offline` y `presence:heartbeat`.
-- **Competición por Socket.io**: `presence.socket.js` también gestiona eventos `competition:join`, `competition:inspection:start`, `competition:round:changed` y `competition:round-final:dismiss`. Los eventos se emiten a las salas privadas `user:<userId>` de host y guest para sincronizar inspección, refresco de sala y paso a marcador/nueva mezcla.
-- **Scrambles de ronda**: `ScrambleGenerator` crea la mezcla de cada nueva `competition_round`; al unirse el guest se prepara la primera ronda activa y cada ronda completada abre la siguiente con nuevo scramble.
+- **Retos directos**: `ChallengeService` guarda invitaciones en Redis `challenge:{id}` con TTL 30s. `presence.socket.js` gestiona `challenge:send`, `challenge:received`, `challenge:accepted`, `challenge:rejected`, `challenge:cancel` y `challenge:cancelled`; valida usuario online, evita autoretos y crea/activa una sala 1v1 al aceptar.
+- **Competición por Socket.io**: `presence.socket.js` también gestiona eventos `competition:join`, `competition:inspection:start`, `competition:round:changed`, `competition:round-final:dismiss` y `competition:leave`. Los eventos se emiten a las salas privadas `user:<userId>` de host y guest para sincronizar inspección, refresco de sala, paso a marcador/nueva mezcla y salida conjunta cuando un participante abandona.
+- **Scrambles de ronda**: `ScrambleGenerator` crea la mezcla de cada nueva `competition_round` según `competition_rounds.event`; al unirse el guest se prepara la primera ronda activa y cada ronda completada abre la siguiente con nuevo scramble. `PATCH /api/v1/competitions/:code/round/event` permite cambiar el cubo de la ronda activa antes de que existan resultados.
+- **Cuota de vídeo**: `VideoQuotaService` usa `UserRepository.getVideoUsage/updateVideoUsage` y `VideoGlobalUsageRepository`, aplica reset mensual lazy individual/global, limita `POST /api/v1/video/token` al menor tiempo restante y expone `POST /api/v1/video/usage` para registrar segundos consumidos desde el frontend. Al agotarse devuelve `VIDEO_QUOTA_EXCEEDED` o `VIDEO_GLOBAL_QUOTA_EXCEEDED` (402).
+- **API docs/OpenAPI**: `src/presentation/openapi/openapiSpec.js` define la especificación OpenAPI 3.0. `GET /api-docs.json` devuelve el contrato JSON y `GET /api-docs` expone Swagger UI para desarrollo/staging.
 
 ## Migraciones y seeds
 
 El runner usa **umzug** (no sequelize-cli, que no soporta ESM).
 Scripts en `scripts/migrate.js` y `scripts/seed.js`.
 Seeders en `src/infrastructure/database/seeders/` — solo para desarrollo, nunca en producción.
+`scripts/seed.js` bloquea ejecución con `NODE_ENV=production` salvo opt-in explícito `ALLOW_PRODUCTION_SEED=true`.
+
+## Staging/demo
+
+`railway.json` prepara deploy en Railway con Nixpacks, `npm start` y healthcheck `/health`. El entorno `develop` usa Railway Free para backend/PostgreSQL/Redis solo como staging/demo. En Railway usar `NODE_ENV=production` para activar cookies seguras y `APP_ENV=develop` para distinguir el entorno. URL actual backend: `https://speedcubers-pulse-backend-production.up.railway.app`.
+
+Smoke test manual:
+
+```bash
+npm run smoke:staging
+```
 
 ## Fases del MVP
 
@@ -214,6 +258,19 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 7C-1 | Manual Playwright pre-release validation + session hardening | ✅ |
 | 7C-2A | Pulido visual/accesibilidad de `/compete` sin cambios backend | ✅ |
 | 7C-2B | Lógica de inspección sincronizada, scrambles, `+4` y marcador acumulado | ✅ |
+| 7D-1 | Cuota mensual gratuita de vídeo con tracking de segundos y token Agora limitado | ✅ |
+| 7D-2 | API docs/OpenAPI para contratos actuales: `/api-docs.json` y `/api-docs` | ✅ |
+| 7D-3 | Cuota global mensual de vídeo para proteger el consumo Agora del proyecto | ✅ |
+| 7E-1 | Selección de cubo por ronda dentro de la sala activa | ✅ |
+| 7E-2 | Scrambles por evento para cubos soportados | ✅ |
+| 7E-3 | Rankings, Elo y estadísticas separados por evento | ✅ |
+| 7F-1 | Pulido UI guiado de ranking, perfil, auth y lobby de competición | ✅ |
+| 7F-2 | Pulido UI guiado de sala activa con overlays e iconos de cubo | ✅ |
+| 8A | Hardening de seguridad pre-producción: CORS, cookies, proxy, secrets y seeders | ✅ |
+| 8B-1 | Configuración backend para staging/demo Railway Free | ✅ |
+| 8B-2 | Validación real Railway/Vercel, logs internos y smoke test manual | ✅ |
+| 9 | Megaminx y FTO: validadores, OpenAPI, WCA map y scrambles | ✅ |
+| 10 | Retos directos: invitación Socket.io, Redis TTL y sala activa al aceptar | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 

@@ -40,4 +40,17 @@ export class CompetitionController {
       return handleError(err, res);
     }
   };
+
+  updateActiveRoundEvent = async (req, res) => {
+    try {
+      const room = await this.competitionService.updateActiveRoundEvent({
+        userId: req.userId,
+        code: req.params.code,
+        event: req.body.event,
+      });
+      return res.status(200).json({ competition: room });
+    } catch (err) {
+      return handleError(err, res);
+    }
+  };
 }
