@@ -13,6 +13,7 @@ import { VideoQuotaService } from '../application/services/VideoQuotaService.js'
 import { CompetitionService } from '../application/services/CompetitionService.js';
 import { ResultService } from '../application/services/ResultService.js';
 import { PresenceService } from '../application/services/PresenceService.js';
+import { ChallengeService } from '../application/services/ChallengeService.js';
 import { AuthController } from '../presentation/controllers/AuthController.js';
 import { RankingController } from '../presentation/controllers/RankingController.js';
 import { VideoController } from '../presentation/controllers/VideoController.js';
@@ -39,6 +40,7 @@ const videoQuotaService = new VideoQuotaService(userRepository, videoGlobalUsage
 const competitionService = new CompetitionService(competitionRepository, competitionRoundRepository, resultRepository);
 const resultService = new ResultService(resultRepository, competitionRepository, competitionRoundRepository, rankingService);
 const presenceService = new PresenceService(redis, userRepository);
+const challengeService = new ChallengeService(redis, userRepository, presenceService, competitionService);
 
 const authController = new AuthController(authService, wcaService);
 const rankingController = new RankingController(rankingService);
@@ -63,6 +65,7 @@ export {
   competitionService,
   resultService,
   presenceService,
+  challengeService,
   authController,
   rankingController,
   videoController,
