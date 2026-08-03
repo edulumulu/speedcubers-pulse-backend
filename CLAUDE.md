@@ -2,7 +2,7 @@
 
 Red social para speedcubers españoles: competencias 1v1 en tiempo real con videoconferencia, rankings y presencia online. Proyecto de Fin de Master — MVP en 8 semanas.
 
-**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2, 8A, 8B-1, 8B-2 y 9 completadas. Railway Free queda como staging/demo `develop`, no como producción definitiva.
+**Estado actual**: Fases 0, 1, 2, 3, 4C, 5A, 5B, 6, 7A, 7B-1, 7B-2, 7B-3, 7C-1, 7C-2A, 7C-2B, 7D-1, 7D-2, 7D-3, 7E-1, 7E-2, 7E-3, 7F-1, 7F-2, 8A, 8B-1, 8B-2, 9 y 10 completadas. Railway Free queda como staging/demo `develop`, no como producción definitiva.
 
 ## Arquitectura
 
@@ -26,8 +26,8 @@ Dependency injection manual: `new UserService(userRepository, wcaService)`. Sin 
 
 - Node.js 20 LTS + Express 4
 - PostgreSQL 14 + Sequelize 6
-- Redis 7 (solo caché: ranking, sesiones online)
-- Socket.io 4 (presencia online, señalización competencias)
+- Redis 7 (caché ranking, presencia online, retos directos con TTL)
+- Socket.io 4 (presencia online, retos directos, señalización competencias)
 - Joi 17 (validación de inputs)
 - Jest 29 (tests)
 - Winston 3 (logging)
@@ -123,6 +123,7 @@ ranking:top:100:{event}        → Array top 100 por evento (TTL 5 min)
 user:{id}:stats:{event}        → Stats y Elo de usuario por evento (TTL 5 min)
 wca:ranking:{user_id}:{event}  → Ranking WCA oficial del usuario en ese evento (TTL 24h)
 online:users                   → Hash de usuarios online `{ id, username, connectedAt, lastSeenAt }`
+challenge:{id}                 → Invitación directa a duelo (TTL 30s)
 competition:{id}               → Estado de competencia activa
 login_fail:{email}             → Contador de intentos fallidos de login (TTL: 15 min)
 login_lock:{email}             → Bloqueo de cuenta activo (TTL: 15 min)
@@ -199,7 +200,8 @@ Tras `npm run db:seed`, 10 usuarios listos con contraseña `Abcd1234`:
 - **Sesión persistente**: `POST /auth/register` y `POST /auth/login` emiten `refresh_token` solo como cookie `httpOnly`; la respuesta JSON devuelve `user` y `tokens.accessToken`, nunca `tokens.refreshToken`. `POST /auth/refresh` acepta cookie o body legacy, rota la cookie y devuelve un nuevo access token; `POST /auth/logout` limpia la cookie.
 - **WCA ID inmutable**: una vez vinculado un WCA ID, `WcaService.validateAndLink` lanza `WCA_ALREADY_LINKED` (409). No se puede cambiar ni desvincular (excepto mediante admin).
 - **Presencia online**: `PresenceService` guarda usuarios conectados en Redis `online:users`; `presence.socket.js` autentica Socket.io con JWT y emite `presence:online`, `presence:offline` y `presence:heartbeat`.
-- **Competición por Socket.io**: `presence.socket.js` también gestiona eventos `competition:join`, `competition:inspection:start`, `competition:round:changed` y `competition:round-final:dismiss`. Los eventos se emiten a las salas privadas `user:<userId>` de host y guest para sincronizar inspección, refresco de sala y paso a marcador/nueva mezcla.
+- **Retos directos**: `ChallengeService` guarda invitaciones en Redis `challenge:{id}` con TTL 30s. `presence.socket.js` gestiona `challenge:send`, `challenge:received`, `challenge:accepted`, `challenge:rejected`, `challenge:cancel` y `challenge:cancelled`; valida usuario online, evita autoretos y crea/activa una sala 1v1 al aceptar.
+- **Competición por Socket.io**: `presence.socket.js` también gestiona eventos `competition:join`, `competition:inspection:start`, `competition:round:changed`, `competition:round-final:dismiss` y `competition:leave`. Los eventos se emiten a las salas privadas `user:<userId>` de host y guest para sincronizar inspección, refresco de sala, paso a marcador/nueva mezcla y salida conjunta cuando un participante abandona.
 - **Scrambles de ronda**: `ScrambleGenerator` crea la mezcla de cada nueva `competition_round` según `competition_rounds.event`; al unirse el guest se prepara la primera ronda activa y cada ronda completada abre la siguiente con nuevo scramble. `PATCH /api/v1/competitions/:code/round/event` permite cambiar el cubo de la ronda activa antes de que existan resultados.
 - **Cuota de vídeo**: `VideoQuotaService` usa `UserRepository.getVideoUsage/updateVideoUsage` y `VideoGlobalUsageRepository`, aplica reset mensual lazy individual/global, limita `POST /api/v1/video/token` al menor tiempo restante y expone `POST /api/v1/video/usage` para registrar segundos consumidos desde el frontend. Al agotarse devuelve `VIDEO_QUOTA_EXCEEDED` o `VIDEO_GLOBAL_QUOTA_EXCEEDED` (402).
 - **API docs/OpenAPI**: `src/presentation/openapi/openapiSpec.js` define la especificación OpenAPI 3.0. `GET /api-docs.json` devuelve el contrato JSON y `GET /api-docs` expone Swagger UI para desarrollo/staging.
@@ -268,6 +270,7 @@ E(A) = 1 / (1 + 10^((Elo_B - Elo_A) / 400))
 | 8B-1 | Configuración backend para staging/demo Railway Free | ✅ |
 | 8B-2 | Validación real Railway/Vercel, logs internos y smoke test manual | ✅ |
 | 9 | Megaminx y FTO: validadores, OpenAPI, WCA map y scrambles | ✅ |
+| 10 | Retos directos: invitación Socket.io, Redis TTL y sala activa al aceptar | ✅ |
 | 7 | Integración, e2e, polish | — |
 | 8 | Deployment (Railway) | — |
 

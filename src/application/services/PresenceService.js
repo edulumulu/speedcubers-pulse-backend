@@ -55,6 +55,15 @@ export class PresenceService {
     await this.redis.hdel(ONLINE_USERS_KEY, userId);
   }
 
+  async getOnlineUser(userId) {
+    const value = await this.redis.hget(ONLINE_USERS_KEY, userId);
+    return value ? parseOnlineUser(value) : null;
+  }
+
+  async isOnline(userId) {
+    return Boolean(await this.getOnlineUser(userId));
+  }
+
   async listOnlineUsers() {
     const values = await this.redis.hvals(ONLINE_USERS_KEY);
     return values
